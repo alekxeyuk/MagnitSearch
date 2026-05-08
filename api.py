@@ -36,12 +36,38 @@ base_search_payload = {
 
 
 def build_search_payload(category_id: int) -> dict:
+    """Build search payload for the Magnit API search endpoint.
+
+    Creates a deep copy of the base search payload and sets the categories
+    list to contain only the specified category ID.
+
+    Args:
+        category_id: The numeric category ID to search for.
+
+    Returns:
+        A dictionary containing the complete search payload ready for POST request.
+    """
     payload = json.loads(json.dumps(base_search_payload))
     payload['categories'] = [category_id]
     return payload
 
 
 def fetch_all_items(category_id: int) -> list[dict]:
+    """Fetch all items from a category using paginated API requests.
+
+    Iterates through all pages of search results until all items are retrieved
+    or no more pages are available. Handles pagination automatically based on
+    totalCount and hasMore flags from the API response.
+
+    Args:
+        category_id: The numeric category ID to fetch items from.
+
+    Returns:
+        A list of item dictionaries from the search results.
+
+    Raises:
+        RuntimeError: If the search request fails (non-200 status code).
+    """
     search_payload = build_search_payload(category_id)
     all_items: list[dict] = []
     offset = search_payload['pagination']['offset']
@@ -82,6 +108,21 @@ def fetch_all_items(category_id: int) -> list[dict]:
 
 
 def fetch_item_details(item_id: str, store_id: str) -> dict:
+    """Fetch detailed information for a specific product item.
+
+    Retrieves complete product details including ingredients, nutrition facts,
+    and other detailed information from the Magnit API item details endpoint.
+
+    Args:
+        item_id: The unique identifier of the product item.
+        store_id: The store code to fetch details for.
+
+    Returns:
+        A dictionary containing the full item details from the API.
+
+    Raises:
+        RuntimeError: If the item request fails (non-200 status code).
+    """
     response = requests.get(
         ITEM_DETAILS_ENDPOINT.format(item_id=item_id, store_id=store_id),
         params=ITEM_REQUEST_PARAMS,

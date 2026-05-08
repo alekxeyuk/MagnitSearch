@@ -62,6 +62,12 @@ class ProductCategory(BaseModel):
 
 
 def ensure_product_columns() -> None:
+    """Ensure all expected columns exist in the Product table.
+
+    Checks for the existence of specific columns (final_price, nutrition_facts_type,
+    ingredients, weight, weight_per_kg) and adds any missing columns
+    to the Product table using ALTER TABLE statements.
+    """
     existing_columns = {
         column_info.name
         for column_info in db.get_columns(Product._meta.table_name)
@@ -82,11 +88,29 @@ def ensure_product_columns() -> None:
 
 
 def ensure_schema() -> None:
+    """Create database tables if they don't exist and ensure schema is up-to-date.
+
+    Creates all required tables (Product, Category, ProductCategory) and
+    ensures any new columns are added to existing tables.
+    """
     db.create_tables([Product, Category, ProductCategory], safe=True)
     ensure_product_columns()
 
 
 def upsert_category(category_id: int, title: str, slug: str) -> Category:
+    """Insert or update a category in the database.
+
+    Uses an upsert operation to either insert a new category or update
+    an existing one with the same ID.
+
+    Args:
+        category_id: The numeric category ID (primary key).
+        title: Category title/name.
+        slug: URL-friendly slug for the category.
+
+    Returns:
+        The Category model instance.
+    """
     Category.insert(
         id=category_id,
         title=title,
@@ -102,6 +126,15 @@ def upsert_category(category_id: int, title: str, slug: str) -> Category:
 
 
 def link_product_to_category(product_id: str, category_id: int) -> None:
+    """Link a product to a category in the many-to-many relationship table.
+
+    Creates a link between a product and a category, ignoring conflicts
+    if the link already exists.
+
+    Args:
+        product_id: The product ID (string) to link.
+        category_id: The category ID (int) to link to.
+    """
     ProductCategory.insert(
         product=product_id,
         category=category_id,

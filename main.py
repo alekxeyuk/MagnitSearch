@@ -23,6 +23,16 @@ from parsers import (
 
 
 def save_item(item: dict, category_id: int | None = None) -> None:
+    """Save or update a product item in the database.
+
+    Extracts relevant product information from the API response and saves
+    it to the database using upsert (replace) logic. Also links the product
+    to a category if category_id is provided.
+
+    Args:
+        item: Product item dictionary from the API response.
+        category_id: Optional category ID to link the product to.
+    """
     image_url = None
     gallery = item.get('gallery')
     if gallery and len(gallery) > 0:
@@ -59,6 +69,11 @@ def save_item(item: dict, category_id: int | None = None) -> None:
 
 
 def run_search_mode() -> None:
+    """Run the search mode to fetch and save products by category.
+
+    Prompts the user to select a search category, then fetches all items
+    from that category using the API and saves them to the database.
+    """
     category = prompt_search_category()
     upsert_category(category['id'], category['title'], category['slug'])
 
@@ -75,6 +90,12 @@ def run_search_mode() -> None:
 
 
 def run_details_mode() -> None:
+    """Run the details mode to fetch detailed info for existing products.
+
+    Prompts the user to select a local category, then fetches detailed
+    information for each product in that category using the item details
+    API and updates the database records.
+    """
     category = prompt_local_category()
     product_ids = (
         Product.select(Product.id)
@@ -108,6 +129,13 @@ def run_details_mode() -> None:
 
 
 def get_operation_mode() -> str:
+    """Prompt the user to select an operation mode.
+
+    Displays available operation modes and returns the user's selection.
+
+    Returns:
+        The user's input as a string representing the chosen mode.
+    """
     print('Select operation mode:')
     print('1 - parse data using /search')
     print('2 - request item details for every item stored in db category')
@@ -117,6 +145,12 @@ def get_operation_mode() -> str:
 
 
 def main() -> None:
+    """Main entry point for the MagnitSearch application.
+
+    Connects to the database, ensures the schema is up-to-date, and
+    dispatches to the appropriate operation mode based on user input.
+    Handles common exceptions and ensures database connection is closed.
+    """
     try:
         db.connect()
         ensure_schema()
