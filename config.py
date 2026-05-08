@@ -41,6 +41,7 @@ CATEGORIES_TABLE = 'categories'
 PRODUCT_CATEGORIES_TABLE = 'product_categories'
 
 OUTPUT_DIR = PROJECT_ROOT / 'output'
+TEMPLATES_DIR = PROJECT_ROOT / 'templates'
 
 AWS_CONFIG_PATH = PROJECT_ROOT / '.aws' / 'config'
 AWS_CREDENTIALS_PATH = PROJECT_ROOT / '.aws' / 'credentials'

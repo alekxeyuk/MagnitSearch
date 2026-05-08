@@ -1,346 +1,25 @@
 import re
 from pathlib import Path
 
-from jinja2 import Template
+from jinja2 import Environment, FileSystemLoader
 
 from config import (
     MECHANICAL_DEBONING_PATTERN,
     OUTPUT_DIR,
+    TEMPLATES_DIR,
     PRICE_DIVISOR,
     PRODUCT_PAGE_URL,
     WEIGHT_KG_THRESHOLD,
     DISCOUNT_MIN_PERCENT,
-    DISCOUNT_MAX_PERCENT
+    DISCOUNT_MAX_PERCENT,
 )
 from models import Category, Product, ProductCategory, db
 
 MECHANICAL_DEBONING_REGEX = re.compile(MECHANICAL_DEBONING_PATTERN, re.IGNORECASE)
 
-INDEX_TEMPLATE = Template(
-    """<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magnit Categories</title>
-    <style>
-        :root {
-            color-scheme: light;
-            --bg: #f6f1e8;
-            --card: #fffdf8;
-            --ink: #1f1a14;
-            --muted: #7b6f62;
-            --accent: #d94841;
-            --line: #e8dccd;
-        }
-        * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            font-family: "Segoe UI", sans-serif;
-            color: var(--ink);
-            background: linear-gradient(180deg, #f9f4ec 0%, var(--bg) 100%);
-        }
-        .page {
-            max-width: 980px;
-            margin: 0 auto;
-            padding: 36px 18px 48px;
-        }
-        .hero {
-            background: linear-gradient(135deg, rgba(217, 72, 65, 0.96), rgba(239, 134, 61, 0.92));
-            color: #fffaf5;
-            padding: 28px 24px;
-            border-radius: 24px;
-        }
-        .hero h1 {
-            margin: 0 0 8px;
-            font-size: clamp(30px, 4vw, 46px);
-        }
-        .hero p {
-            margin: 0;
-            color: rgba(255, 250, 245, 0.88);
-        }
-        .list {
-            list-style: none;
-            margin: 24px 0 0;
-            padding: 0;
-            display: grid;
-            gap: 14px;
-        }
-        .item {
-            background: var(--card);
-            border: 1px solid var(--line);
-            border-radius: 18px;
-            padding: 18px;
-        }
-        .item a {
-            color: inherit;
-            text-decoration: none;
-            display: block;
-        }
-        .item h2 {
-            margin: 0 0 8px;
-            font-size: 20px;
-        }
-        .meta {
-            color: var(--muted);
-            font-size: 14px;
-        }
-    </style>
-</head>
-<body>
-    <main class="page">
-        <section class="hero">
-            <h1>Категории каталога</h1>
-            <p>Сгенерированные страницы по категориям из локальной базы. Скидка промокода: {{ discount_percent }}%.</p>
-        </section>
-        <ul class="list">
-            {% for category in categories %}
-            <li class="item">
-                <a href="{{ category.filename }}">
-                    <h2>{{ category.title }}</h2>
-                    <div class="meta">Позиций: {{ category.item_count }}</div>
-                </a>
-            </li>
-            {% endfor %}
-        </ul>
-    </main>
-</body>
-</html>
-"""
-)
-
-CATEGORY_TEMPLATE = Template(
-    """<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ category.title }}</title>
-    <style>
-        :root {
-            color-scheme: light;
-            --bg: #f6f1e8;
-            --paper: #fffdf8;
-            --ink: #1f1a14;
-            --muted: #7b6f62;
-            --accent: #d94841;
-            --accent-soft: #f4d7c9;
-            --line: #e8dccd;
-            --shadow: 0 18px 45px rgba(73, 47, 24, 0.10);
-        }
-        * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            font-family: "Segoe UI", sans-serif;
-            color: var(--ink);
-            background:
-                radial-gradient(circle at top left, #fff7ec 0, transparent 30%),
-                linear-gradient(180deg, #f9f4ec 0%, var(--bg) 100%);
-        }
-        .page {
-            max-width: 1100px;
-            margin: 0 auto;
-            padding: 40px 20px 56px;
-        }
-        .hero {
-            background: linear-gradient(135deg, rgba(217, 72, 65, 0.96), rgba(239, 134, 61, 0.92));
-            color: #fffaf5;
-            border-radius: 28px;
-            padding: 32px 28px;
-            box-shadow: var(--shadow);
-        }
-        .hero a {
-            color: #fffaf5;
-        }
-        .hero h1 {
-            margin: 12px 0 10px;
-            font-size: clamp(32px, 5vw, 52px);
-            line-height: 0.95;
-        }
-        .hero p {
-            margin: 0;
-            max-width: 720px;
-            color: rgba(255, 250, 245, 0.88);
-            font-size: 16px;
-        }
-        .meta {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            margin-top: 18px;
-        }
-        .meta-badge {
-            background: rgba(255, 250, 245, 0.16);
-            border: 1px solid rgba(255, 250, 245, 0.24);
-            border-radius: 999px;
-            padding: 10px 14px;
-            font-size: 14px;
-        }
-        .list {
-            list-style: none;
-            margin: 28px 0 0;
-            padding: 0;
-            display: grid;
-            gap: 16px;
-        }
-        .item {
-            display: grid;
-            grid-template-columns: 112px minmax(0, 1fr);
-            gap: 18px;
-            background: var(--paper);
-            border: 1px solid var(--line);
-            border-radius: 22px;
-            padding: 18px;
-            box-shadow: 0 10px 30px rgba(73, 47, 24, 0.06);
-        }
-        .thumb {
-            width: 112px;
-            height: 112px;
-            border-radius: 18px;
-            background: linear-gradient(180deg, #fff7ee, #f2e7d7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-        .thumb img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .thumb span {
-            color: var(--muted);
-            font-size: 13px;
-            text-align: center;
-            padding: 12px;
-        }
-        .item h2 {
-            margin: 0 0 10px;
-            font-size: 20px;
-            line-height: 1.15;
-        }
-        .price-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        .price-main {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--accent);
-        }
-        .price-old {
-            color: var(--muted);
-            text-decoration: line-through;
-            font-size: 15px;
-        }
-        .chips {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 10px;
-        }
-        .chip {
-            border-radius: 999px;
-            background: var(--accent-soft);
-            color: #7b261f;
-            padding: 6px 10px;
-            font-size: 13px;
-        }
-        .item p {
-            margin: 0;
-            color: var(--muted);
-            line-height: 1.45;
-            font-size: 14px;
-        }
-        .item a {
-            color: inherit;
-            text-decoration: none;
-        }
-        .item a:hover h2 {
-            text-decoration: underline;
-            text-decoration-color: rgba(217, 72, 65, 0.45);
-        }
-        @media (max-width: 720px) {
-            .page {
-                padding: 24px 14px 40px;
-            }
-            .hero {
-                padding: 24px 18px;
-                border-radius: 22px;
-            }
-            .item {
-                grid-template-columns: 1fr;
-            }
-            .thumb {
-                width: 100%;
-                height: 180px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <main class="page">
-        <section class="hero">
-            <a href="index.html">Назад к категориям</a>
-            <h1>{{ category.title }}</h1>
-            <p>Товары из локальной базы, отсортированные по цене за килограмм по возрастанию.</p>
-            <div class="meta">
-                <div class="meta-badge">Позиций: {{ items|length }}</div>
-                <div class="meta-badge">Сортировка: `weight_per_kg` ASC</div>
-                <div class="meta-badge">Промокод: {{ discount_percent }}%</div>
-            </div>
-        </section>
-
-        <ul class="list">
-            {% for item in items %}
-            <li class="item">
-                <div class="thumb">
-                    {% if item.image_url %}
-                    <img src="{{ item.image_url }}" alt="{{ item.name }}">
-                    {% else %}
-                    <span>Нет изображения</span>
-                    {% endif %}
-                </div>
-                <div>
-                    {% if item.page_url %}
-                    <a href="{{ item.page_url }}" target="_blank" rel="noreferrer">
-                        <h2>{{ item.name }}</h2>
-                    </a>
-                    {% else %}
-                    <h2>{{ item.name }}</h2>
-                    {% endif %}
-                    <div class="price-row">
-                        <div class="price-main">{{ item.price_rub }}</div>
-                        {% if item.old_price_rub %}
-                        <div class="price-old">{{ item.old_price_rub }}</div>
-                        {% endif %}
-                    </div>
-                    <div class="chips">
-                        <div class="chip">{{ item.weight_per_kg_rub }} / кг</div>
-                        {% if item.weight_label %}
-                        <div class="chip">{{ item.weight_label }}</div>
-                        {% endif %}
-                        {% if item.final_price %}
-                        <div class="chip">Финальная цена</div>
-                        {% endif %}
-                        {% if item.promo_applied %}
-                        <div class="chip">С промокодом</div>
-                        {% endif %}
-                    </div>
-                    {% if item.ingredients %}
-                    <p>{{ item.ingredients }}</p>
-                    {% endif %}
-                </div>
-            </li>
-            {% endfor %}
-        </ul>
-    </main>
-</body>
-</html>
-"""
+jinja_env = Environment(
+    loader=FileSystemLoader(str(TEMPLATES_DIR)),
+    keep_trailing_newline=True,
 )
 
 
@@ -447,13 +126,14 @@ def generate_category_pages(discount_percent: float) -> list[dict]:
     )
 
     generated_categories: list[dict] = []
+    category_template = jinja_env.get_template('category.j2')
     for category in categories:
         items = get_category_products(category, discount_percent)
         if not items:
             continue
 
         filename = f'{category.slug}.html'
-        rendered_html = CATEGORY_TEMPLATE.render(
+        rendered_html = category_template.render(
             category=category,
             items=items,
             discount_percent=discount_percent,
@@ -472,7 +152,8 @@ def generate_category_pages(discount_percent: float) -> list[dict]:
 
 def generate_categories_index(categories: list[dict], discount_percent: float) -> Path:
     output_dir = ensure_output_dir()
-    rendered_html = INDEX_TEMPLATE.render(
+    index_template = jinja_env.get_template('index.j2')
+    rendered_html = index_template.render(
         categories=categories,
         discount_percent=discount_percent,
     )
