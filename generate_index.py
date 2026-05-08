@@ -4,6 +4,8 @@ Generates HTML pages from the local database using Jinja2 templates.
 Handles price formatting, discount application, and HTML file generation.
 """
 
+from typing import cast
+
 import re
 from pathlib import Path
 
@@ -165,9 +167,11 @@ def build_item_view(product: Product, discount_percent: float) -> dict:
         Dictionary with formatted product data ready for template rendering.
     """
     can_discount = not bool(product.final_price)
-    effective_price = apply_discount(product.price, discount_percent, can_discount)
+    effective_price = apply_discount(
+        cast(int | None, product.price), discount_percent, can_discount
+    )
     effective_weight_per_kg = apply_discount(
-        product.weight_per_kg, discount_percent, can_discount
+        cast(int | None, product.weight_per_kg), discount_percent, can_discount
     )
 
     return {
@@ -175,14 +179,14 @@ def build_item_view(product: Product, discount_percent: float) -> dict:
         "image_url": product.image_url,
         "price_rub": format_price(effective_price),
         "old_price_rub": (
-            format_price(product.price)
+            format_price(cast(int | None, product.price))
             if can_discount
             and discount_percent > 0
             and effective_price != product.price
-            else format_price(product.old_price)
+            else format_price(cast(int | None, product.old_price))
         ),
         "weight_per_kg_rub": (format_price(effective_weight_per_kg) or "Нет данных"),
-        "weight_label": format_weight(product.weight),
+        "weight_label": format_weight(cast(int | None, product.weight)),
         "final_price": bool(product.final_price),
         "ingredients": product.ingredients,
         "promo_applied": can_discount and discount_percent > 0,

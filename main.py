@@ -4,6 +4,8 @@ Entry point for the application with operation modes for searching,
 fetching details, generating HTML, and uploading to S3.
 """
 
+from typing import cast
+
 import sys
 
 import requests
@@ -73,7 +75,9 @@ def save_item(item: dict, category_id: int | None = None) -> None:
     ).execute()
 
     if category_id is not None:
-        link_product_to_category(item.get("id"), category_id)
+        product_id = item.get("id")
+        if product_id is not None:
+            link_product_to_category(product_id, category_id)
 
 
 def run_search_mode() -> None:
@@ -121,7 +125,7 @@ def run_details_mode() -> None:
     with db.atomic():
         for index, product in enumerate(products, start=1):
             item = fetch_item_details(product.id, store_id)
-            save_item(item, category_id=category.id)
+            save_item(item, category_id=cast(int, category.id))
             updated_count += 1
             progress = updated_count / total_count
             bar_length = PROGRESS_BAR_LENGTH

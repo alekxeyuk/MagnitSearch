@@ -4,6 +4,8 @@ Handles category selection, slug generation, and prompts for both
 search categories and local database categories.
 """
 
+from typing import cast
+
 import re
 
 from config import DEFAULT_CATEGORIES
@@ -45,7 +47,10 @@ def get_default_categories() -> list[dict]:
         {
             "id": category["id"],
             "title": category["title"],
-            "slug": slugify_category_title(category["title"], category["id"]),
+            "slug": slugify_category_title(
+                cast(str, category["title"]),
+                cast(int, category["id"]),
+            ),
         }
         for category in DEFAULT_CATEGORIES
     ]
