@@ -1,0 +1,365 @@
+import re
+from pathlib import Path
+
+from jinja2 import Template
+
+from models import Product, db
+
+MECHANICAL_DEBONING_PATTERN = re.compile(r'мех\w*\s+обвал\w*', re.IGNORECASE)
+
+HTML_TEMPLATE = Template(
+    """<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magnit Products</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --bg: #f6f1e8;
+            --paper: #fffdf8;
+            --ink: #1f1a14;
+            --muted: #7b6f62;
+            --accent: #d94841;
+            --accent-soft: #f4d7c9;
+            --line: #e8dccd;
+            --shadow: 0 18px 45px rgba(73, 47, 24, 0.10);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Segoe UI", sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at top left, #fff7ec 0, transparent 30%),
+                linear-gradient(180deg, #f9f4ec 0%, var(--bg) 100%);
+        }
+
+        .page {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 20px 56px;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, rgba(217, 72, 65, 0.96), rgba(239, 134, 61, 0.92));
+            color: #fffaf5;
+            border-radius: 28px;
+            padding: 32px 28px;
+            box-shadow: var(--shadow);
+        }
+
+        .hero h1 {
+            margin: 0 0 10px;
+            font-size: clamp(32px, 5vw, 52px);
+            line-height: 0.95;
+        }
+
+        .hero p {
+            margin: 0;
+            max-width: 720px;
+            color: rgba(255, 250, 245, 0.88);
+            font-size: 16px;
+        }
+
+        .meta {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 18px;
+        }
+
+        .meta-badge {
+            background: rgba(255, 250, 245, 0.16);
+            border: 1px solid rgba(255, 250, 245, 0.24);
+            border-radius: 999px;
+            padding: 10px 14px;
+            font-size: 14px;
+        }
+
+        .list {
+            list-style: none;
+            margin: 28px 0 0;
+            padding: 0;
+            display: grid;
+            gap: 16px;
+        }
+
+        .item {
+            display: grid;
+            grid-template-columns: 112px minmax(0, 1fr);
+            gap: 18px;
+            background: var(--paper);
+            border: 1px solid var(--line);
+            border-radius: 22px;
+            padding: 18px;
+            box-shadow: 0 10px 30px rgba(73, 47, 24, 0.06);
+        }
+
+        .thumb {
+            width: 112px;
+            height: 112px;
+            border-radius: 18px;
+            background: linear-gradient(180deg, #fff7ee, #f2e7d7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .thumb span {
+            color: var(--muted);
+            font-size: 13px;
+            text-align: center;
+            padding: 12px;
+        }
+
+        .item h2 {
+            margin: 0 0 10px;
+            font-size: 20px;
+            line-height: 1.15;
+        }
+
+        .price-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .price-main {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .price-old {
+            color: var(--muted);
+            text-decoration: line-through;
+            font-size: 15px;
+        }
+
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .chip {
+            border-radius: 999px;
+            background: var(--accent-soft);
+            color: #7b261f;
+            padding: 6px 10px;
+            font-size: 13px;
+        }
+
+        .item p {
+            margin: 0;
+            color: var(--muted);
+            line-height: 1.45;
+            font-size: 14px;
+        }
+
+        .item a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .item a:hover h2 {
+            text-decoration: underline;
+            text-decoration-color: rgba(217, 72, 65, 0.45);
+        }
+
+        @media (max-width: 720px) {
+            .page {
+                padding: 24px 14px 40px;
+            }
+
+            .hero {
+                padding: 24px 18px;
+                border-radius: 22px;
+            }
+
+            .item {
+                grid-template-columns: 1fr;
+            }
+
+            .thumb {
+                width: 100%;
+                height: 180px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <section class="hero">
+            <h1>Каталог без мехобвалки</h1>
+            <p>Товары из локальной базы, отсортированные по цене за килограмм по возрастанию.</p>
+            <div class="meta">
+                <div class="meta-badge">Позиций: {{ items|length }}</div>
+                <div class="meta-badge">Сортировка: `weight_per_kg` ASC</div>
+                <div class="meta-badge">Промокод: {{ discount_percent }}%</div>
+            </div>
+        </section>
+
+        <ul class="list">
+            {% for item in items %}
+            <li class="item">
+                <div class="thumb">
+                    {% if item.image_url %}
+                    <img src="{{ item.image_url }}" alt="{{ item.name }}">
+                    {% else %}
+                    <span>Нет изображения</span>
+                    {% endif %}
+                </div>
+                <div>
+                    {% if item.page_url %}
+                    <a href="{{ item.page_url }}" target="_blank" rel="noreferrer">
+                        <h2>{{ item.name }}</h2>
+                    </a>
+                    {% else %}
+                    <h2>{{ item.name }}</h2>
+                    {% endif %}
+                    <div class="price-row">
+                        <div class="price-main">{{ item.price_rub }}</div>
+                        {% if item.old_price_rub %}
+                        <div class="price-old">{{ item.old_price_rub }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="chips">
+                        <div class="chip">{{ item.weight_per_kg_rub }} / кг</div>
+                        {% if item.weight_label %}
+                        <div class="chip">{{ item.weight_label }}</div>
+                        {% endif %}
+                        {% if item.final_price %}
+                        <div class="chip">Финальная цена</div>
+                        {% endif %}
+                        {% if item.promo_applied %}
+                        <div class="chip">С промокодом</div>
+                        {% endif %}
+                    </div>
+                    {% if item.ingredients %}
+                    <p>{{ item.ingredients }}</p>
+                    {% endif %}
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </main>
+</body>
+</html>
+"""
+)
+
+
+def format_price(value: int | None) -> str | None:
+    if value is None:
+        return None
+    return f"{value / 100:.2f} ₽"
+
+
+def format_weight(weight: int | None) -> str | None:
+    if weight is None:
+        return None
+    if weight >= 1000 and weight % 1000 == 0:
+        return f"{weight // 1000} кг"
+    if weight >= 1000:
+        return f"{weight / 1000:.2f} кг"
+    return f"{weight} г"
+
+
+def has_mechanical_deboning(ingredients: str | None) -> bool:
+    if not ingredients:
+        return False
+    normalized = ingredients.replace('-', ' ')
+    return bool(MECHANICAL_DEBONING_PATTERN.search(normalized))
+
+
+def apply_discount(value: int | None, discount_percent: float, can_discount: bool) -> int | None:
+    if value is None or not can_discount or discount_percent <= 0:
+        return value
+    discounted_value = value * (100 - discount_percent) / 100
+    return int(round(discounted_value))
+
+
+def parse_discount_percent(raw_value: str) -> float:
+    normalized = raw_value.strip().replace(',', '.')
+    if not normalized:
+        return 0.0
+
+    discount_percent = float(normalized)
+    if discount_percent < 0 or discount_percent > 100:
+        raise ValueError('Discount percent must be between 0 and 100')
+    return discount_percent
+
+
+def ask_discount_percent() -> float:
+    print('Do you have a promocode discount?')
+    raw_value = input('Enter discount percent, or 0 if none: ')
+    return parse_discount_percent(raw_value)
+
+
+def build_item_view(product: Product, discount_percent: float) -> dict:
+    can_discount = not bool(product.final_price)
+    effective_price = apply_discount(product.price, discount_percent, can_discount)
+    effective_weight_per_kg = apply_discount(product.weight_per_kg, discount_percent, can_discount)
+
+    return {
+        'name': product.name or 'Без названия',
+        'image_url': product.image_url,
+        'price_rub': format_price(effective_price),
+        'old_price_rub': (
+            format_price(product.price)
+            if can_discount and discount_percent > 0 and effective_price != product.price
+            else format_price(product.old_price)
+        ),
+        'weight_per_kg_rub': format_price(effective_weight_per_kg) or 'Нет данных',
+        'weight_label': format_weight(product.weight),
+        'final_price': bool(product.final_price),
+        'ingredients': product.ingredients,
+        'promo_applied': can_discount and discount_percent > 0,
+        'effective_weight_per_kg': effective_weight_per_kg if effective_weight_per_kg is not None else 10**12,
+        'page_url': (
+            f"https://magnit.ru/product/{product.id}"
+            if product.id else None
+        ),
+    }
+
+
+def generate_index_html(discount_percent: float = 0.0, output_path: str = 'index.html') -> Path:
+    products = sorted(
+        [
+            build_item_view(product, discount_percent)
+            for product in Product.select()
+            .where(Product.weight_per_kg.is_null(False))
+            if not has_mechanical_deboning(product.ingredients)
+        ],
+        key=lambda item: (item['effective_weight_per_kg'], item['name']),
+    )
+
+    rendered_html = HTML_TEMPLATE.render(items=products, discount_percent=discount_percent)
+    output_file = Path(output_path)
+    output_file.write_text(rendered_html, encoding='utf-8')
+    return output_file
+
+
+def run_html_mode() -> None:
+    if db.is_closed():
+        db.connect()
+    discount_percent = ask_discount_percent()
+    output_file = generate_index_html(discount_percent=discount_percent)
+    print(f"Generated {output_file}")
