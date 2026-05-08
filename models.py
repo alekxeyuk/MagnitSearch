@@ -9,7 +9,9 @@ from peewee import (
     TextField,
 )
 
-db = SqliteDatabase('products.db')
+from config import DB_PATH, CATEGORIES_TABLE, PRODUCTS_TABLE, PRODUCT_CATEGORIES_TABLE
+
+db = SqliteDatabase(DB_PATH)
 
 
 class BaseModel(Model):
@@ -38,7 +40,7 @@ class Product(BaseModel):
     weight_per_kg = IntegerField(null=True)
 
     class Meta:
-        table_name = 'products'
+        table_name = PRODUCTS_TABLE
 
 
 class Category(BaseModel):
@@ -47,7 +49,7 @@ class Category(BaseModel):
     slug = TextField(unique=True)
 
     class Meta:
-        table_name = 'categories'
+        table_name = CATEGORIES_TABLE
 
 
 class ProductCategory(BaseModel):
@@ -55,7 +57,7 @@ class ProductCategory(BaseModel):
     category = ForeignKeyField(Category, backref='product_links', on_delete='CASCADE')
 
     class Meta:
-        table_name = 'product_categories'
+        table_name = PRODUCT_CATEGORIES_TABLE
         primary_key = CompositeKey('product', 'category')
 
 

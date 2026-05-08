@@ -6,11 +6,7 @@ from pathlib import Path
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError, ProfileNotFound
 
-PROJECT_ROOT = Path(__file__).resolve().parent
-AWS_CONFIG_PATH = PROJECT_ROOT / '.aws' / 'config'
-AWS_CREDENTIALS_PATH = PROJECT_ROOT / '.aws' / 'credentials'
-AWS_PARAMS_PATH = PROJECT_ROOT / '.aws' / 'params'
-OUTPUT_DIR = PROJECT_ROOT / 'output'
+from config import AWS_CONFIG_PATH, AWS_CREDENTIALS_PATH, AWS_PARAMS_PATH, OUTPUT_DIR
 
 
 def load_aws_profile(profile_name: str = 'default') -> dict:

@@ -4,6 +4,22 @@ import sys
 import requests
 
 from categories import prompt_local_category, prompt_search_category
+from config import (
+    CATALOG_TYPE,
+    HEADERS,
+    ITEM_DETAILS_ENDPOINT,
+    ITEM_REQUEST_PARAMS,
+    PROGRESS_BAR_LENGTH,
+    REQUEST_TIMEOUT,
+    SEARCH_ENDPOINT,
+    SEARCH_INCLUDE_ADULT_GOODS,
+    SEARCH_PAGINATION_LIMIT,
+    SEARCH_PAGINATION_OFFSET,
+    SEARCH_SORT_ORDER,
+    SEARCH_SORT_TYPE,
+    STORE_CODE,
+    STORE_TYPE,
+)
 from models import (
     Product,
     ProductCategory,
@@ -13,32 +29,20 @@ from models import (
     upsert_category,
 )
 
-headers = {
-    'accept': 'application/json',
-    'content-type': 'application/json',
-    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36',
-    'x-device-id': 'e3267ea9-8f6b-4e17-bca0-64a06ba225c7',
-}
-
-item_request_params = {
-    'storetype': 'express',
-    'catalogtype': '2',
-}
-
 base_search_payload = {
     'categories': [],
-    'includeAdultGoods': True,
+    'includeAdultGoods': SEARCH_INCLUDE_ADULT_GOODS,
     'pagination': {
-        'limit': 32,
-        'offset': 0,
+        'limit': SEARCH_PAGINATION_LIMIT,
+        'offset': SEARCH_PAGINATION_OFFSET,
     },
     'sort': {
-        'order': 'desc',
-        'type': 'price',
+        'order': SEARCH_SORT_ORDER,
+        'type': SEARCH_SORT_TYPE,
     },
-    'storeCode': '543354',
-    'storeType': 'express',
-    'catalogType': '2',
+    'storeCode': STORE_CODE,
+    'storeType': STORE_TYPE,
+    'catalogType': CATALOG_TYPE,
 }
 
 
@@ -171,10 +175,10 @@ def fetch_all_items(category_id: int) -> list[dict]:
     while True:
         search_payload['pagination']['offset'] = offset
         response = requests.post(
-            'https://magnit.ru/webgate/v2/goods/search',
-            headers=headers,
+            SEARCH_ENDPOINT,
+            headers=HEADERS,
             json=search_payload,
-            timeout=30,
+            timeout=REQUEST_TIMEOUT,
         )
 
         if response.status_code != 200:
@@ -203,10 +207,10 @@ def fetch_all_items(category_id: int) -> list[dict]:
 
 def fetch_item_details(item_id: str, store_id: str) -> dict:
     response = requests.get(
-        f'https://magnit.ru/webgate/v2/goods/{item_id}/stores/{store_id}',
-        params=item_request_params,
-        headers=headers,
-        timeout=30,
+        ITEM_DETAILS_ENDPOINT.format(item_id=item_id, store_id=store_id),
+        params=ITEM_REQUEST_PARAMS,
+        headers=HEADERS,
+        timeout=REQUEST_TIMEOUT,
     )
 
     if response.status_code != 200:
@@ -254,7 +258,7 @@ def run_details_mode() -> None:
             save_item(item, category_id=category.id)
             updated_count += 1
             progress = updated_count / total_count
-            bar_length = 30
+            bar_length = PROGRESS_BAR_LENGTH
             filled_length = int(bar_length * progress)
             bar = '#' * filled_length + '-' * (bar_length - filled_length)
             sys.stdout.write(

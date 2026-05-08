@@ -3,10 +3,18 @@ from pathlib import Path
 
 from jinja2 import Template
 
+from config import (
+    MECHANICAL_DEBONING_PATTERN,
+    OUTPUT_DIR,
+    PRICE_DIVISOR,
+    PRODUCT_PAGE_URL,
+    WEIGHT_KG_THRESHOLD,
+    DISCOUNT_MIN_PERCENT,
+    DISCOUNT_MAX_PERCENT
+)
 from models import Category, Product, ProductCategory, db
 
-MECHANICAL_DEBONING_PATTERN = re.compile(r'мех\w*\s+обвал\w*', re.IGNORECASE)
-OUTPUT_DIR = Path('output')
+MECHANICAL_DEBONING_REGEX = re.compile(MECHANICAL_DEBONING_PATTERN, re.IGNORECASE)
 
 INDEX_TEMPLATE = Template(
     """<!DOCTYPE html>
@@ -339,16 +347,16 @@ CATEGORY_TEMPLATE = Template(
 def format_price(value: int | None) -> str | None:
     if value is None:
         return None
-    return f"{value / 100:.2f} ₽"
+    return f"{value / PRICE_DIVISOR:.2f} ₽"
 
 
 def format_weight(weight: int | None) -> str | None:
     if weight is None:
         return None
-    if weight >= 1000 and weight % 1000 == 0:
-        return f"{weight // 1000} кг"
-    if weight >= 1000:
-        return f"{weight / 1000:.2f} кг"
+    if weight >= WEIGHT_KG_THRESHOLD and weight % WEIGHT_KG_THRESHOLD == 0:
+        return f"{weight // WEIGHT_KG_THRESHOLD} кг"
+    if weight >= WEIGHT_KG_THRESHOLD:
+        return f"{weight / WEIGHT_KG_THRESHOLD:.2f} кг"
     return f"{weight} г"
 
 
@@ -356,7 +364,7 @@ def has_mechanical_deboning(ingredients: str | None) -> bool:
     if not ingredients:
         return False
     normalized = ingredients.replace('-', ' ')
-    return bool(MECHANICAL_DEBONING_PATTERN.search(normalized))
+    return bool(MECHANICAL_DEBONING_REGEX.search(normalized))
 
 
 def apply_discount(value: int | None, discount_percent: float, can_discount: bool) -> int | None:
@@ -372,7 +380,7 @@ def parse_discount_percent(raw_value: str) -> float:
         return 0.0
 
     discount_percent = float(normalized)
-    if discount_percent < 0 or discount_percent > 100:
+    if discount_percent < DISCOUNT_MIN_PERCENT or discount_percent > DISCOUNT_MAX_PERCENT:
         raise ValueError('Discount percent must be between 0 and 100')
     return discount_percent
 
@@ -404,7 +412,7 @@ def build_item_view(product: Product, discount_percent: float) -> dict:
         'promo_applied': can_discount and discount_percent > 0,
         'effective_weight_per_kg': effective_weight_per_kg if effective_weight_per_kg is not None else 10**12,
         'page_url': (
-            f"https://magnit.ru/product/{product.id}"
+            PRODUCT_PAGE_URL.format(product_id=product.id)
             if product.id else None
         ),
     }

@@ -1,10 +1,7 @@
 import re
 
+from config import DEFAULT_CATEGORIES
 from models import Category, ProductCategory
-
-DEFAULT_CATEGORIES: list[dict] = [
-    {'id': 64249, 'title': 'Колбасы и сосиски'},
-]
 
 
 def slugify_category_title(title: str, category_id: int) -> str:
