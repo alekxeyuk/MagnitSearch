@@ -1,9 +1,23 @@
-from peewee import BooleanField, FloatField, IntegerField, Model, SqliteDatabase, TextField
+from peewee import (
+    BooleanField,
+    CompositeKey,
+    FloatField,
+    ForeignKeyField,
+    IntegerField,
+    Model,
+    SqliteDatabase,
+    TextField,
+)
 
 db = SqliteDatabase('products.db')
 
 
-class Product(Model):
+class BaseModel(Model):
+    class Meta:
+        database = db
+
+
+class Product(BaseModel):
     id = TextField(primary_key=True)
     product_id = TextField(null=True)
     name = TextField(null=True)
@@ -24,8 +38,25 @@ class Product(Model):
     weight_per_kg = IntegerField(null=True)
 
     class Meta:
-        database = db
         table_name = 'products'
+
+
+class Category(BaseModel):
+    id = IntegerField(primary_key=True)
+    title = TextField()
+    slug = TextField(unique=True)
+
+    class Meta:
+        table_name = 'categories'
+
+
+class ProductCategory(BaseModel):
+    product = ForeignKeyField(Product, backref='category_links', on_delete='CASCADE')
+    category = ForeignKeyField(Category, backref='product_links', on_delete='CASCADE')
+
+    class Meta:
+        table_name = 'product_categories'
+        primary_key = CompositeKey('product', 'category')
 
 
 def ensure_product_columns() -> None:
@@ -46,3 +77,30 @@ def ensure_product_columns() -> None:
             db.execute_sql(
                 f'ALTER TABLE {Product._meta.table_name} ADD COLUMN {column_name} {column_type}'
             )
+
+
+def ensure_schema() -> None:
+    db.create_tables([Product, Category, ProductCategory], safe=True)
+    ensure_product_columns()
+
+
+def upsert_category(category_id: int, title: str, slug: str) -> Category:
+    Category.insert(
+        id=category_id,
+        title=title,
+        slug=slug,
+    ).on_conflict(
+        conflict_target=[Category.id],
+        update={
+            Category.title: title,
+            Category.slug: slug,
+        },
+    ).execute()
+    return Category.get_by_id(category_id)
+
+
+def link_product_to_category(product_id: str, category_id: int) -> None:
+    ProductCategory.insert(
+        product=product_id,
+        category=category_id,
+    ).on_conflict_ignore().execute()

@@ -2,7 +2,16 @@ import json
 import sys
 
 import requests
-from models import Product, db, ensure_product_columns
+
+from categories import prompt_local_category, prompt_search_category
+from models import (
+    Product,
+    ProductCategory,
+    db,
+    ensure_schema,
+    link_product_to_category,
+    upsert_category,
+)
 
 headers = {
     'accept': 'application/json',
@@ -16,8 +25,8 @@ item_request_params = {
     'catalogtype': '2',
 }
 
-json_data = {
-    'categories': [64249],
+base_search_payload = {
+    'categories': [],
     'includeAdultGoods': True,
     'pagination': {
         'limit': 32,
@@ -31,6 +40,14 @@ json_data = {
     'storeType': 'express',
     'catalogType': '2',
 }
+
+
+def build_search_payload(category_id: int) -> dict:
+    payload = json.loads(json.dumps(base_search_payload))
+    payload['categories'] = [category_id]
+    return payload
+
+
 def find_detail_by_name(details: list[dict], detail_name: str) -> dict | None:
     for detail in details:
         if detail.get('name') == detail_name:
@@ -65,6 +82,8 @@ def extract_weight_grams(item: dict, details: list[dict]) -> int | None:
     characteristics = find_detail_by_name(details, 'Характеристики') or {}
     parameters = characteristics.get('parameters') or []
     weight_value = find_parameter_value(parameters, 'Вес, кг')
+    if weight_value is None:
+        weight_value = find_parameter_value(parameters, 'Объем, л')
     return parse_weight_grams_from_kg(weight_value)
 
 
@@ -106,7 +125,7 @@ def extract_ingredients(details: list[dict]) -> str | None:
     return value if isinstance(value, str) else None
 
 
-def save_item(item: dict) -> None:
+def save_item(item: dict, category_id: int | None = None) -> None:
     image_url = None
     gallery = item.get('gallery')
     if gallery and len(gallery) > 0:
@@ -135,31 +154,35 @@ def save_item(item: dict) -> None:
         nutrition_facts_type=extract_nutrition_facts_type(details),
         ingredients=extract_ingredients(details),
         weight=weight,
-        weight_per_kg=extract_weight_per_kg(item, weight)
+        weight_per_kg=extract_weight_per_kg(item, weight),
     ).execute()
 
+    if category_id is not None:
+        link_product_to_category(item.get('id'), category_id)
 
-def fetch_all_items() -> list[dict]:
+
+def fetch_all_items(category_id: int) -> list[dict]:
+    search_payload = build_search_payload(category_id)
     all_items: list[dict] = []
-    offset = json_data['pagination']['offset']
-    limit = json_data['pagination']['limit']
+    offset = search_payload['pagination']['offset']
+    limit = search_payload['pagination']['limit']
     total_count = None
 
     while True:
-        json_data['pagination']['offset'] = offset
+        search_payload['pagination']['offset'] = offset
         response = requests.post(
             'https://magnit.ru/webgate/v2/goods/search',
             headers=headers,
-            json=json_data,
+            json=search_payload,
             timeout=30,
         )
 
         if response.status_code != 200:
             raise RuntimeError(f"Search request failed with status {response.status_code}")
 
-        rjs: dict = response.json()
-        items = rjs.get('items')
-        pagination = rjs.get('pagination') or {}
+        response_json: dict = response.json()
+        items = response_json.get('items')
+        pagination = response_json.get('pagination') or {}
 
         if not isinstance(items, list) or not items:
             break
@@ -195,31 +218,40 @@ def fetch_item_details(item_id: str, store_id: str) -> dict:
 
 
 def run_search_mode() -> None:
-    items = fetch_all_items()
+    category = prompt_search_category()
+    upsert_category(category['id'], category['title'], category['slug'])
+
+    items = fetch_all_items(category['id'])
     if not items:
         print('No items returned from search')
         return
 
     with db.atomic():
         for item in items:
-            save_item(item)
+            save_item(item, category_id=category['id'])
 
-    print(f"Saved {len(items)} items to database")
+    print(f"Saved {len(items)} items to database for {category['title']}")
 
 
 def run_details_mode() -> None:
-    products = list(Product.select().where(Product.id.is_null(False)))
+    category = prompt_local_category()
+    product_ids = (
+        Product.select(Product.id)
+        .join(ProductCategory)
+        .where(ProductCategory.category == category)
+    )
+    products = list(Product.select().where(Product.id.in_(product_ids)))
     if not products:
-        print('No items found in database')
+        print('No items found in selected category')
         return
 
     updated_count = 0
     total_count = len(products)
-    store_id = str(json_data['storeCode'])
+    store_id = str(base_search_payload['storeCode'])
     with db.atomic():
         for index, product in enumerate(products, start=1):
             item = fetch_item_details(product.id, store_id)
-            save_item(item)
+            save_item(item, category_id=category.id)
             updated_count += 1
             progress = updated_count / total_count
             bar_length = 30
@@ -231,22 +263,22 @@ def run_details_mode() -> None:
             sys.stdout.flush()
 
     print()
-    print(f"Updated {updated_count} items from item details")
+    print(f"Updated {updated_count} items from item details for {category.title}")
 
 
 def get_operation_mode() -> str:
     print('Select operation mode:')
     print('1 - parse data using /search')
-    print('2 - request item details for every item stored in db')
-    print('3 - generate index.html from local db')
+    print('2 - request item details for every item stored in db category')
+    print('3 - generate category html files from local db')
+    print('4 - upload output folder to s3 object storage')
     return input('Mode: ').strip()
 
 
 def main() -> None:
     try:
         db.connect()
-        db.create_tables([Product], safe=True)
-        ensure_product_columns()
+        ensure_schema()
 
         mode = get_operation_mode()
         if mode == '1':
@@ -257,6 +289,10 @@ def main() -> None:
             from generate_index import run_html_mode
 
             run_html_mode()
+        elif mode == '4':
+            from s3_upload import run_upload_mode
+
+            run_upload_mode()
         else:
             print('Unknown mode')
     except (RuntimeError, ValueError, requests.RequestException) as exc:
