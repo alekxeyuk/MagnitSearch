@@ -25,19 +25,19 @@ from config import (
 )
 
 base_search_payload = {
-    'categories': [],
-    'includeAdultGoods': SEARCH_INCLUDE_ADULT_GOODS,
-    'pagination': {
-        'limit': SEARCH_PAGINATION_LIMIT,
-        'offset': SEARCH_PAGINATION_OFFSET,
+    "categories": [],
+    "includeAdultGoods": SEARCH_INCLUDE_ADULT_GOODS,
+    "pagination": {
+        "limit": SEARCH_PAGINATION_LIMIT,
+        "offset": SEARCH_PAGINATION_OFFSET,
     },
-    'sort': {
-        'order': SEARCH_SORT_ORDER,
-        'type': SEARCH_SORT_TYPE,
+    "sort": {
+        "order": SEARCH_SORT_ORDER,
+        "type": SEARCH_SORT_TYPE,
     },
-    'storeCode': STORE_CODE,
-    'storeType': STORE_TYPE,
-    'catalogType': CATALOG_TYPE,
+    "storeCode": STORE_CODE,
+    "storeType": STORE_TYPE,
+    "catalogType": CATALOG_TYPE,
 }
 
 
@@ -54,7 +54,7 @@ def build_search_payload(category_id: int) -> dict:
         A dictionary containing the complete search payload ready for POST request.
     """
     payload = json.loads(json.dumps(base_search_payload))
-    payload['categories'] = [category_id]
+    payload["categories"] = [category_id]
     return payload
 
 
@@ -76,12 +76,12 @@ def fetch_all_items(category_id: int) -> list[dict]:
     """
     search_payload = build_search_payload(category_id)
     all_items: list[dict] = []
-    offset = search_payload['pagination']['offset']
-    limit = search_payload['pagination']['limit']
+    offset = search_payload["pagination"]["offset"]
+    limit = search_payload["pagination"]["limit"]
     total_count = None
 
     while True:
-        search_payload['pagination']['offset'] = offset
+        search_payload["pagination"]["offset"] = offset
         response = requests.post(
             SEARCH_ENDPOINT,
             headers=HEADERS,
@@ -90,19 +90,21 @@ def fetch_all_items(category_id: int) -> list[dict]:
         )
 
         if response.status_code != 200:
-            raise RuntimeError(f"Search request failed with status {response.status_code}")
+            raise RuntimeError(
+                f"Search request failed with status {response.status_code}"
+            )
 
         response_json: dict = response.json()
-        items = response_json.get('items')
-        pagination = response_json.get('pagination') or {}
+        items = response_json.get("items")
+        pagination = response_json.get("pagination") or {}
 
         if not isinstance(items, list) or not items:
             break
 
         all_items.extend(items)
 
-        total_count = pagination.get('totalCount', total_count)
-        has_more = pagination.get('hasMore', False)
+        total_count = pagination.get("totalCount", total_count)
+        has_more = pagination.get("hasMore", False)
         offset += limit
 
         if total_count is not None and len(all_items) >= total_count:

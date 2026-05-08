@@ -59,12 +59,12 @@ class Category(BaseModel):
 
 
 class ProductCategory(BaseModel):
-    product = ForeignKeyField(Product, backref='category_links', on_delete='CASCADE')
-    category = ForeignKeyField(Category, backref='product_links', on_delete='CASCADE')
+    product = ForeignKeyField(Product, backref="category_links", on_delete="CASCADE")
+    category = ForeignKeyField(Category, backref="product_links", on_delete="CASCADE")
 
     class Meta:
         table_name = PRODUCT_CATEGORIES_TABLE
-        primary_key = CompositeKey('product', 'category')
+        primary_key = CompositeKey("product", "category")
 
 
 def ensure_product_columns() -> None:
@@ -75,21 +75,20 @@ def ensure_product_columns() -> None:
     to the Product table using ALTER TABLE statements.
     """
     existing_columns = {
-        column_info.name
-        for column_info in db.get_columns(Product._meta.table_name)
+        column_info.name for column_info in db.get_columns(Product._meta.table_name)
     }
     expected_columns = {
-        'final_price': 'INTEGER',
-        'nutrition_facts_type': 'TEXT',
-        'ingredients': 'TEXT',
-        'weight': 'INTEGER',
-        'weight_per_kg': 'INTEGER',
+        "final_price": "INTEGER",
+        "nutrition_facts_type": "TEXT",
+        "ingredients": "TEXT",
+        "weight": "INTEGER",
+        "weight_per_kg": "INTEGER",
     }
 
     for column_name, column_type in expected_columns.items():
         if column_name not in existing_columns:
             db.execute_sql(
-                f'ALTER TABLE {Product._meta.table_name} ADD COLUMN {column_name} {column_type}'
+                f"ALTER TABLE {Product._meta.table_name} ADD COLUMN {column_name} {column_type}"
             )
 
 

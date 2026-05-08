@@ -21,7 +21,7 @@ def find_detail_by_name(details: list[dict], detail_name: str) -> dict | None:
         The matching detail dictionary, or None if not found.
     """
     for detail in details:
-        if detail.get('name') == detail_name:
+        if detail.get("name") == detail_name:
             return detail
     return None
 
@@ -40,8 +40,8 @@ def find_parameter_value(parameters: list[dict], parameter_name: str) -> str | N
         The parameter value as a string, or None if not found.
     """
     for parameter in parameters:
-        if parameter.get('name') == parameter_name:
-            return parameter.get('value')
+        if parameter.get("name") == parameter_name:
+            return parameter.get("value")
     return None
 
 
@@ -61,7 +61,7 @@ def parse_weight_grams_from_kg(value: str | None) -> int | None:
     if not value:
         return None
 
-    normalized_value = value.replace(',', '.').strip()
+    normalized_value = value.replace(",", ".").strip()
     try:
         return int(round(float(normalized_value) * 1000))
     except ValueError:
@@ -82,16 +82,16 @@ def extract_weight_grams(item: dict, details: list[dict]) -> int | None:
     Returns:
         Weight in grams as an integer, or None if weight cannot be determined.
     """
-    weighted = item.get('weighted') or {}
-    if weighted.get('isWeighted'):
-        shelf_weight = weighted.get('shelfWeight')
+    weighted = item.get("weighted") or {}
+    if weighted.get("isWeighted"):
+        shelf_weight = weighted.get("shelfWeight")
         return shelf_weight if isinstance(shelf_weight, int) else None
 
-    characteristics = find_detail_by_name(details, 'Характеристики') or {}
-    parameters = characteristics.get('parameters') or []
-    weight_value = find_parameter_value(parameters, 'Вес, кг')
+    characteristics = find_detail_by_name(details, "Характеристики") or {}
+    parameters = characteristics.get("parameters") or []
+    weight_value = find_parameter_value(parameters, "Вес, кг")
     if weight_value is None:
-        weight_value = find_parameter_value(parameters, 'Объем, л')
+        weight_value = find_parameter_value(parameters, "Объем, л")
     return parse_weight_grams_from_kg(weight_value)
 
 
@@ -108,12 +108,12 @@ def extract_weight_per_kg(item: dict, weight_grams: int | None) -> int | None:
     Returns:
         Price per kilogram as an integer, or None if calculation is not possible.
     """
-    weighted = item.get('weighted') or {}
-    if weighted.get('isWeighted'):
-        unit_price = weighted.get('unitPrice')
+    weighted = item.get("weighted") or {}
+    if weighted.get("isWeighted"):
+        unit_price = weighted.get("unitPrice")
         return unit_price if isinstance(unit_price, int) else None
 
-    price = item.get('price')
+    price = item.get("price")
     if not isinstance(price, int) or not weight_grams:
         return None
 
@@ -132,8 +132,8 @@ def extract_final_price(item: dict) -> bool:
     Returns:
         True if the product has the final price badge, False otherwise.
     """
-    badges = item.get('badges') or []
-    return any(badge.get('text') == 'Финальная цена' for badge in badges)
+    badges = item.get("badges") or []
+    return any(badge.get("text") == "Финальная цена" for badge in badges)
 
 
 def extract_nutrition_facts_type(details: list[dict]) -> str | None:
@@ -149,7 +149,7 @@ def extract_nutrition_facts_type(details: list[dict]) -> str | None:
         JSON string representation of nutrition facts, or None if not found.
     """
     nutrition_facts = next(
-        (detail for detail in details if detail.get('type') == 'nutritionFactsType'),
+        (detail for detail in details if detail.get("type") == "nutritionFactsType"),
         None,
     )
     if not nutrition_facts:
@@ -170,9 +170,9 @@ def extract_ingredients(details: list[dict]) -> str | None:
     Returns:
         Ingredients string, or None if not found or not a string.
     """
-    ingredients_detail = find_detail_by_name(details, 'Состав')
+    ingredients_detail = find_detail_by_name(details, "Состав")
     if not ingredients_detail:
         return None
 
-    value = ingredients_detail.get('value')
+    value = ingredients_detail.get("value")
     return value if isinstance(value, str) else None

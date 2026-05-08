@@ -42,29 +42,29 @@ def save_item(item: dict, category_id: int | None = None) -> None:
         category_id: Optional category ID to link the product to.
     """
     image_url = None
-    gallery = item.get('gallery')
+    gallery = item.get("gallery")
     if gallery and len(gallery) > 0:
-        image_url = gallery[0].get('url')
+        image_url = gallery[0].get("url")
 
-    ratings = item.get('ratings') or {}
-    promotion = item.get('promotion') or {}
-    details = item.get('details') or []
+    ratings = item.get("ratings") or {}
+    promotion = item.get("promotion") or {}
+    details = item.get("details") or []
     weight = extract_weight_grams(item, details)
 
     Product.replace(
-        id=item.get('id'),
-        product_id=item.get('productId'),
-        name=item.get('name'),
-        price=item.get('price'),
-        quantity=item.get('quantity'),
+        id=item.get("id"),
+        product_id=item.get("productId"),
+        name=item.get("name"),
+        price=item.get("price"),
+        quantity=item.get("quantity"),
         image_url=image_url,
-        rating=ratings.get('rating'),
-        comments_count=ratings.get('commentsCount'),
-        discount_percent=promotion.get('discountPercent'),
-        old_price=promotion.get('oldPrice'),
-        is_promotion=promotion.get('isPromotion'),
-        seo_code=item.get('seoCode'),
-        cashback=item.get('cashback'),
+        rating=ratings.get("rating"),
+        comments_count=ratings.get("commentsCount"),
+        discount_percent=promotion.get("discountPercent"),
+        old_price=promotion.get("oldPrice"),
+        is_promotion=promotion.get("isPromotion"),
+        seo_code=item.get("seoCode"),
+        cashback=item.get("cashback"),
         final_price=extract_final_price(item),
         nutrition_facts_type=extract_nutrition_facts_type(details),
         ingredients=extract_ingredients(details),
@@ -73,7 +73,7 @@ def save_item(item: dict, category_id: int | None = None) -> None:
     ).execute()
 
     if category_id is not None:
-        link_product_to_category(item.get('id'), category_id)
+        link_product_to_category(item.get("id"), category_id)
 
 
 def run_search_mode() -> None:
@@ -83,16 +83,16 @@ def run_search_mode() -> None:
     from that category using the API and saves them to the database.
     """
     category = prompt_search_category()
-    upsert_category(category['id'], category['title'], category['slug'])
+    upsert_category(category["id"], category["title"], category["slug"])
 
-    items = fetch_all_items(category['id'])
+    items = fetch_all_items(category["id"])
     if not items:
-        print('No items returned from search')
+        print("No items returned from search")
         return
 
     with db.atomic():
         for item in items:
-            save_item(item, category_id=category['id'])
+            save_item(item, category_id=category["id"])
 
     print(f"Saved {len(items)} items to database for {category['title']}")
 
@@ -112,12 +112,12 @@ def run_details_mode() -> None:
     )
     products = list(Product.select().where(Product.id.in_(product_ids)))
     if not products:
-        print('No items found in selected category')
+        print("No items found in selected category")
         return
 
     updated_count = 0
     total_count = len(products)
-    store_id = str(base_search_payload['storeCode'])
+    store_id = str(base_search_payload["storeCode"])
     with db.atomic():
         for index, product in enumerate(products, start=1):
             item = fetch_item_details(product.id, store_id)
@@ -126,9 +126,9 @@ def run_details_mode() -> None:
             progress = updated_count / total_count
             bar_length = PROGRESS_BAR_LENGTH
             filled_length = int(bar_length * progress)
-            progress_bar = '#' * filled_length + '-' * (bar_length - filled_length)
+            progress_bar = "#" * filled_length + "-" * (bar_length - filled_length)
             sys.stdout.write(
-                f'\r[{progress_bar}] {index}/{total_count} ({progress * 100:.1f}%)'
+                f"\r[{progress_bar}] {index}/{total_count} ({progress * 100:.1f}%)"
             )
             sys.stdout.flush()
 
@@ -144,12 +144,12 @@ def get_operation_mode() -> str:
     Returns:
         The user's input as a string representing the chosen mode.
     """
-    print('Select operation mode:')
-    print('1 - parse data using /search')
-    print('2 - request item details for every item stored in db category')
-    print('3 - generate category html files from local db')
-    print('4 - upload output folder to s3 object storage')
-    return input('Mode: ').strip()
+    print("Select operation mode:")
+    print("1 - parse data using /search")
+    print("2 - request item details for every item stored in db category")
+    print("3 - generate category html files from local db")
+    print("4 - upload output folder to s3 object storage")
+    return input("Mode: ").strip()
 
 
 def main() -> None:
@@ -164,16 +164,16 @@ def main() -> None:
         ensure_schema()
 
         mode = get_operation_mode()
-        if mode == '1':
+        if mode == "1":
             run_search_mode()
-        elif mode == '2':
+        elif mode == "2":
             run_details_mode()
-        elif mode == '3':
+        elif mode == "3":
             run_html_mode()
-        elif mode == '4':
+        elif mode == "4":
             run_upload_mode()
         else:
-            print('Unknown mode')
+            print("Unknown mode")
     except (RuntimeError, ValueError, requests.RequestException) as exc:
         print(exc)
     finally:
@@ -181,5 +181,5 @@ def main() -> None:
             db.close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

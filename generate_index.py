@@ -81,11 +81,13 @@ def has_mechanical_deboning(ingredients: str | None) -> bool:
     """
     if not ingredients:
         return False
-    normalized = ingredients.replace('-', ' ')
+    normalized = ingredients.replace("-", " ")
     return bool(MECHANICAL_DEBONING_REGEX.search(normalized))
 
 
-def apply_discount(value: int | None, discount_percent: float, can_discount: bool) -> int | None:
+def apply_discount(
+    value: int | None, discount_percent: float, can_discount: bool
+) -> int | None:
     """Apply a discount percentage to a value.
 
     Reduces the input value by the specified discount percentage,
@@ -121,13 +123,16 @@ def parse_discount_percent(raw_value: str) -> float:
     Raises:
         ValueError: If discount percent is outside valid range.
     """
-    normalized = raw_value.strip().replace(',', '.')
+    normalized = raw_value.strip().replace(",", ".")
     if not normalized:
         return 0.0
 
     discount_percent = float(normalized)
-    if discount_percent < DISCOUNT_MIN_PERCENT or discount_percent > DISCOUNT_MAX_PERCENT:
-        raise ValueError('Discount percent must be between 0 and 100')
+    if (
+        discount_percent < DISCOUNT_MIN_PERCENT
+        or discount_percent > DISCOUNT_MAX_PERCENT
+    ):
+        raise ValueError("Discount percent must be between 0 and 100")
     return discount_percent
 
 
@@ -140,8 +145,8 @@ def ask_discount_percent() -> float:
     Returns:
         Discount percentage as a float (0.0 if no discount).
     """
-    print('Do you have a promocode discount?')
-    raw_value = input('Enter discount percent, or 0 if none: ')
+    print("Do you have a promocode discount?")
+    raw_value = input("Enter discount percent, or 0 if none: ")
     return parse_discount_percent(raw_value)
 
 
@@ -161,32 +166,31 @@ def build_item_view(product: Product, discount_percent: float) -> dict:
     """
     can_discount = not bool(product.final_price)
     effective_price = apply_discount(product.price, discount_percent, can_discount)
-    effective_weight_per_kg = apply_discount(product.weight_per_kg, discount_percent, can_discount)
+    effective_weight_per_kg = apply_discount(
+        product.weight_per_kg, discount_percent, can_discount
+    )
 
     return {
-        'name': product.name or 'Без названия',
-        'image_url': product.image_url,
-        'price_rub': format_price(effective_price),
-        'old_price_rub': (
+        "name": product.name or "Без названия",
+        "image_url": product.image_url,
+        "price_rub": format_price(effective_price),
+        "old_price_rub": (
             format_price(product.price)
-            if can_discount and discount_percent > 0 and effective_price != product.price
+            if can_discount
+            and discount_percent > 0
+            and effective_price != product.price
             else format_price(product.old_price)
         ),
-        'weight_per_kg_rub': (
-            format_price(effective_weight_per_kg) or 'Нет данных'
+        "weight_per_kg_rub": (format_price(effective_weight_per_kg) or "Нет данных"),
+        "weight_label": format_weight(product.weight),
+        "final_price": bool(product.final_price),
+        "ingredients": product.ingredients,
+        "promo_applied": can_discount and discount_percent > 0,
+        "effective_weight_per_kg": (
+            effective_weight_per_kg if effective_weight_per_kg is not None else 10**12
         ),
-        'weight_label': format_weight(product.weight),
-        'final_price': bool(product.final_price),
-        'ingredients': product.ingredients,
-        'promo_applied': can_discount and discount_percent > 0,
-        'effective_weight_per_kg': (
-            effective_weight_per_kg
-            if effective_weight_per_kg is not None
-            else 10**12
-        ),
-        'page_url': (
-            PRODUCT_PAGE_URL.format(product_id=product.id)
-            if product.id else None
+        "page_url": (
+            PRODUCT_PAGE_URL.format(product_id=product.id) if product.id else None
         ),
     }
 
@@ -228,7 +232,9 @@ def get_category_products(category: Category, discount_percent: float) -> list[d
         for product in query
         if not has_mechanical_deboning(product.ingredients)
     ]
-    return sorted(items, key=lambda item: (item['effective_weight_per_kg'], item['name']))
+    return sorted(
+        items, key=lambda item: (item["effective_weight_per_kg"], item["name"])
+    )
 
 
 def generate_category_pages(discount_percent: float) -> list[dict]:
@@ -252,24 +258,24 @@ def generate_category_pages(discount_percent: float) -> list[dict]:
     )
 
     generated_categories: list[dict] = []
-    category_template = jinja_env.get_template('category.j2')
+    category_template = jinja_env.get_template("category.j2")
     for category in categories:
         items = get_category_products(category, discount_percent)
         if not items:
             continue
 
-        filename = f'{category.slug}.html'
+        filename = f"{category.slug}.html"
         rendered_html = category_template.render(
             category=category,
             items=items,
             discount_percent=discount_percent,
         )
-        (output_dir / filename).write_text(rendered_html, encoding='utf-8')
+        (output_dir / filename).write_text(rendered_html, encoding="utf-8")
         generated_categories.append(
             {
-                'title': category.title,
-                'filename': filename,
-                'item_count': len(items),
+                "title": category.title,
+                "filename": filename,
+                "item_count": len(items),
             }
         )
 
@@ -290,13 +296,13 @@ def generate_categories_index(categories: list[dict], discount_percent: float) -
         Path to the generated index.html file.
     """
     output_dir = ensure_output_dir()
-    index_template = jinja_env.get_template('index.j2')
+    index_template = jinja_env.get_template("index.j2")
     rendered_html = index_template.render(
         categories=categories,
         discount_percent=discount_percent,
     )
-    output_file = output_dir / 'index.html'
-    output_file.write_text(rendered_html, encoding='utf-8')
+    output_file = output_dir / "index.html"
+    output_file.write_text(rendered_html, encoding="utf-8")
     return output_file
 
 
