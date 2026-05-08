@@ -19,8 +19,11 @@ The current workflow is interactive and is driven from `main.py`.
 | File | Purpose |
 | --- | --- |
 | `main.py` | Interactive entry point for import, detail refresh, HTML generation, and upload. |
-| `models.py` | SQLite schema and Peewee helpers. |
-| `categories.py` | Default categories, category slugging, and interactive category prompts. |
+| `config.py` | Configuration constants including API endpoints, headers, and file paths. |
+| `api.py` | HTTP requests to Magnit API for search and item details. |
+| `parsers.py` | Extraction functions for weight, ingredients, nutrition facts, and price data. |
+| `models.py` | SQLite schema with Product, Category, and ProductCategory models using Peewee. |
+| `categories.py` | Category slugging and interactive category selection prompts. |
 | `generate_index.py` | Static HTML generation for the category index and category pages. |
 | `s3_upload.py` | Uploads generated files to S3-compatible object storage. |
 | `products.db` | Local SQLite database created/updated by the scripts. |
@@ -84,7 +87,7 @@ Typical run order:
 
 ## Category Selection
 
-`categories.py` contains built-in default categories:
+`config.py` contains built-in default categories:
 
 ```python
 DEFAULT_CATEGORIES = [
@@ -152,6 +155,6 @@ The repository currently ignores:
 
 ## Notes
 
-- API headers, store code, store type, and catalog type are currently hardcoded in `main.py`.
+- The project is organized into modular components: `config.py` for settings, `api.py` for API calls, and `parsers.py` for data extraction.
 - Prices are stored as integer minor units and formatted as rubles during HTML generation.
 - `generate_index.py` contains the full HTML templates inline.
