@@ -1,3 +1,9 @@
+"""Categories module for MagnitSearch.
+
+Handles category selection, slug generation, and prompts for both
+search categories and local database categories.
+"""
+
 import re
 
 from config import DEFAULT_CATEGORIES
@@ -59,7 +65,7 @@ def get_search_categories() -> list[dict]:
         for category in get_default_categories()
     }
 
-    for category in Category.select().order_by(Category.title.asc()):
+    for category in list(Category.select().order_by(Category.title.asc())):
         categories_by_id[category.id] = {
             'id': category.id,
             'title': category.title,

@@ -1,3 +1,9 @@
+"""Models module for MagnitSearch.
+
+Defines the database schema using Peewee ORM including Product,
+Category, and ProductCategory models with utility functions.
+"""
+
 from peewee import (
     BooleanField,
     CompositeKey,

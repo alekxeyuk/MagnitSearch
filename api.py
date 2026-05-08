@@ -1,3 +1,9 @@
+"""API module for MagnitSearch.
+
+Handles HTTP requests to the Magnit API including search queries
+and item details retrieval.
+"""
+
 import json
 
 import requests

@@ -1,3 +1,9 @@
+"""Main module for MagnitSearch.
+
+Entry point for the application with operation modes for searching,
+fetching details, generating HTML, and uploading to S3.
+"""
+
 import sys
 
 import requests
@@ -5,6 +11,7 @@ import requests
 from api import base_search_payload, fetch_all_items, fetch_item_details
 from categories import prompt_local_category, prompt_search_category
 from config import PROGRESS_BAR_LENGTH
+from generate_index import run_html_mode
 from models import (
     Product,
     ProductCategory,
@@ -20,6 +27,7 @@ from parsers import (
     extract_weight_grams,
     extract_weight_per_kg,
 )
+from s3_upload import run_upload_mode
 
 
 def save_item(item: dict, category_id: int | None = None) -> None:
@@ -118,9 +126,9 @@ def run_details_mode() -> None:
             progress = updated_count / total_count
             bar_length = PROGRESS_BAR_LENGTH
             filled_length = int(bar_length * progress)
-            bar = '#' * filled_length + '-' * (bar_length - filled_length)
+            progress_bar = '#' * filled_length + '-' * (bar_length - filled_length)
             sys.stdout.write(
-                f'\r[{bar}] {index}/{total_count} ({progress * 100:.1f}%)'
+                f'\r[{progress_bar}] {index}/{total_count} ({progress * 100:.1f}%)'
             )
             sys.stdout.flush()
 
@@ -161,12 +169,8 @@ def main() -> None:
         elif mode == '2':
             run_details_mode()
         elif mode == '3':
-            from generate_index import run_html_mode
-
             run_html_mode()
         elif mode == '4':
-            from s3_upload import run_upload_mode
-
             run_upload_mode()
         else:
             print('Unknown mode')

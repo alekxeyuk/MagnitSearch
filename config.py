@@ -1,3 +1,9 @@
+"""Config module for MagnitSearch.
+
+Contains all configuration constants including API endpoints,
+database settings, and file paths for the application.
+"""
+
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -11,7 +17,11 @@ PRODUCT_PAGE_URL = 'https://magnit.ru/product/{product_id}'
 HEADERS = {
     'accept': 'application/json',
     'content-type': 'application/json',
-    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36',
+    'user-agent': (
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+        'AppleWebKit/537.36 (KHTML, like Gecko) '
+        'Chrome/147.0.0.0 Safari/537.36'
+    ),
     'x-device-id': 'e3267ea9-8f6b-4e17-bca0-64a06ba225c7',
 }
 

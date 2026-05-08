@@ -1,3 +1,9 @@
+"""Generate index module for MagnitSearch.
+
+Generates HTML pages from the local database using Jinja2 templates.
+Handles price formatting, discount application, and HTML file generation.
+"""
+
 import re
 from pathlib import Path
 
@@ -166,12 +172,18 @@ def build_item_view(product: Product, discount_percent: float) -> dict:
             if can_discount and discount_percent > 0 and effective_price != product.price
             else format_price(product.old_price)
         ),
-        'weight_per_kg_rub': format_price(effective_weight_per_kg) or 'Нет данных',
+        'weight_per_kg_rub': (
+            format_price(effective_weight_per_kg) or 'Нет данных'
+        ),
         'weight_label': format_weight(product.weight),
         'final_price': bool(product.final_price),
         'ingredients': product.ingredients,
         'promo_applied': can_discount and discount_percent > 0,
-        'effective_weight_per_kg': effective_weight_per_kg if effective_weight_per_kg is not None else 10**12,
+        'effective_weight_per_kg': (
+            effective_weight_per_kg
+            if effective_weight_per_kg is not None
+            else 10**12
+        ),
         'page_url': (
             PRODUCT_PAGE_URL.format(product_id=product.id)
             if product.id else None

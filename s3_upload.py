@@ -1,3 +1,9 @@
+"""S3 upload module for MagnitSearch.
+
+Handles uploading generated HTML files to S3-compatible storage
+using boto3 with credentials from project AWS config files.
+"""
+
 import mimetypes
 import os
 from configparser import ConfigParser

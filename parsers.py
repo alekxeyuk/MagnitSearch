@@ -1,3 +1,9 @@
+"""Parsers module for MagnitSearch.
+
+Contains functions for extracting and parsing product data including
+weight, price, ingredients, and nutrition facts from API responses.
+"""
+
 import json
 
 
