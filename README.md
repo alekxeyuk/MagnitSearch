@@ -39,13 +39,14 @@ The current workflow is interactive and is driven from `main.py`.
   - `peewee`
   - `jinja2`
   - `boto3`
+  - `pydantic`
 
-There is no requirements file in the repository yet, so install the packages manually:
+There is a requirements file in the repository, so install the packages like this:
 
 ```bash
 python -m venv venv
 source venv/bin/activate
-pip install requests peewee jinja2 boto3
+pip install -r requirements.txt
 ```
 
 On Windows PowerShell, activate the environment with:

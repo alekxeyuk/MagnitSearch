@@ -23,6 +23,7 @@ from config import (
     STORE_CODE,
     STORE_TYPE,
 )
+from schemas import Item
 
 base_search_payload = {
     "categories": [],
@@ -64,12 +65,13 @@ def fetch_all_items(category_id: int) -> list[dict]:
     Iterates through all pages of search results until all items are retrieved
     or no more pages are available. Handles pagination automatically based on
     totalCount and hasMore flags from the API response.
+    Validates each item with Pydantic schemas before returning.
 
     Args:
         category_id: The numeric category ID to fetch items from.
 
     Returns:
-        A list of item dictionaries from the search results.
+        A list of validated item dictionaries from the search results.
 
     Raises:
         RuntimeError: If the search request fails (non-200 status code).
@@ -101,7 +103,15 @@ def fetch_all_items(category_id: int) -> list[dict]:
         if not isinstance(items, list) or not items:
             break
 
-        all_items.extend(items)
+        # Validate each item with Pydantic
+        for item_data in items:
+            try:
+                validated_item = Item.model_validate(item_data)
+                all_items.append(validated_item.model_dump(by_alias=True))
+            except Exception as exc:
+                raise RuntimeError(
+                    f"API response validation failed for item: {exc}"
+                ) from exc
 
         total_count = pagination.get("totalCount", total_count)
         has_more = pagination.get("hasMore", False)
@@ -120,16 +130,18 @@ def fetch_item_details(item_id: str, store_id: str) -> dict:
 
     Retrieves complete product details including ingredients, nutrition facts,
     and other detailed information from the Magnit API item details endpoint.
+    Validates the response with Pydantic schemas before returning.
 
     Args:
         item_id: The unique identifier of the product item.
         store_id: The store code to fetch details for.
 
     Returns:
-        A dictionary containing the full item details from the API.
+        A validated dictionary containing the full item details from the API.
 
     Raises:
-        RuntimeError: If the item request fails (non-200 status code).
+        RuntimeError: If the item request fails (non-200 status code)
+            or validation fails.
     """
     response = requests.get(
         ITEM_DETAILS_ENDPOINT.format(item_id=item_id, store_id=store_id),
@@ -143,4 +155,11 @@ def fetch_item_details(item_id: str, store_id: str) -> dict:
             f"Item request failed for {item_id} with status {response.status_code}"
         )
 
-    return response.json()
+    item_data = response.json()
+    try:
+        validated_item = Item.model_validate(item_data)
+        return validated_item.model_dump(by_alias=True)
+    except Exception as exc:
+        raise RuntimeError(
+            f"API response validation failed for item {item_id}: {exc}"
+        ) from exc

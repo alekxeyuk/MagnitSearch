@@ -2,3 +2,4 @@ requests
 peewee
 jinja2
 boto3
+pydantic
