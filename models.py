@@ -43,7 +43,7 @@ class Product(BaseModel):
     nutrition_facts_type = TextField(null=True)
     ingredients = TextField(null=True)
     weight = IntegerField(null=True)
-    weight_per_kg = IntegerField(null=True)
+    price_per_kg = IntegerField(null=True)
 
     class Meta:
         table_name = PRODUCTS_TABLE
@@ -71,7 +71,7 @@ def ensure_product_columns() -> None:
     """Ensure all expected columns exist in the Product table.
 
     Checks for the existence of specific columns (final_price, nutrition_facts_type,
-    ingredients, weight, weight_per_kg) and adds any missing columns
+    ingredients, weight, price_per_kg) and adds any missing columns
     to the Product table using ALTER TABLE statements.
     """
     existing_columns = {
@@ -82,7 +82,7 @@ def ensure_product_columns() -> None:
         "nutrition_facts_type": "TEXT",
         "ingredients": "TEXT",
         "weight": "INTEGER",
-        "weight_per_kg": "INTEGER",
+        "price_per_kg": "INTEGER",
     }
 
     for column_name, column_type in expected_columns.items():

@@ -28,7 +28,7 @@ from parsers import (
     extract_ingredients,
     extract_nutrition_facts_type,
     extract_weight_grams,
-    extract_weight_per_kg,
+    extract_price_per_kg,
 )
 from s3_upload import run_upload_mode
 
@@ -74,7 +74,7 @@ def save_item(item: dict, category_id: int | None = None) -> None:
         nutrition_facts_type=extract_nutrition_facts_type(details),
         ingredients=extract_ingredients(details),
         weight=weight,
-        weight_per_kg=extract_weight_per_kg(item, weight),
+        price_per_kg=extract_price_per_kg(item, weight),
     ).execute()
 
     if category_id is not None:

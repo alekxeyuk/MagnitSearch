@@ -177,7 +177,7 @@
             <p>Товары из локальной базы, отсортированные по цене за килограмм по возрастанию.</p>
             <div class="meta">
                 <div class="meta-badge">Позиций: {{ items|length }}</div>
-                <div class="meta-badge">Сортировка: `weight_per_kg` ASC</div>
+                <div class="meta-badge">Сортировка: `price_per_kg` ASC</div>
                 <div class="meta-badge">Промокод: {{ discount_percent }}%</div>
             </div>
         </section>
@@ -207,7 +207,7 @@
                         {% endif %}
                     </div>
                     <div class="chips">
-                        <div class="chip">{{ item.weight_per_kg_rub }} / кг</div>
+                        <div class="chip">{{ item.price_per_kg_rub }} / кг</div>
                         {% if item.weight_label %}
                         <div class="chip">{{ item.weight_label }}</div>
                         {% endif %}

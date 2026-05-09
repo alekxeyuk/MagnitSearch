@@ -105,7 +105,7 @@ HTML generation writes files to `output/`:
 - `output/index.html` lists all generated categories.
 - `output/<category-slug>.html` lists products for one category.
 
-Products are sorted by `weight_per_kg` ascending after any entered promocode discount is applied. Items marked as final price are not discounted.
+Products are sorted by `price_per_kg` ascending after any entered promocode discount is applied. Items marked as final price are not discounted.
 
 ## S3 Upload Configuration
 

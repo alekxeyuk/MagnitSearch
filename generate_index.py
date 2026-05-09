@@ -65,8 +65,8 @@ def build_item_view(product: Product, discount_percent: float) -> dict:
     effective_price = apply_discount(
         cast(int | None, product.price), discount_percent, can_discount
     )
-    effective_weight_per_kg = apply_discount(
-        cast(int | None, product.weight_per_kg), discount_percent, can_discount
+    effective_price_per_kg = apply_discount(
+        cast(int | None, product.price_per_kg), discount_percent, can_discount
     )
 
     return {
@@ -80,13 +80,13 @@ def build_item_view(product: Product, discount_percent: float) -> dict:
             and effective_price != product.price
             else format_price(cast(int | None, product.old_price))
         ),
-        "weight_per_kg_rub": (format_price(effective_weight_per_kg) or "Нет данных"),
+        "price_per_kg_rub": (format_price(effective_price_per_kg) or "Нет данных"),
         "weight_label": format_weight(cast(int | None, product.weight)),
         "final_price": bool(product.final_price),
         "ingredients": product.ingredients,
         "promo_applied": can_discount and discount_percent > 0,
-        "effective_weight_per_kg": (
-            effective_weight_per_kg if effective_weight_per_kg is not None else 10**12
+        "effective_price_per_kg": (
+            effective_price_per_kg if effective_price_per_kg is not None else 10**12
         ),
         "page_url": (
             PRODUCT_PAGE_URL.format(product_id=product.id) if product.id else None
@@ -132,7 +132,7 @@ def get_category_products(category: Category, discount_percent: float) -> list[d
         if not has_mechanical_deboning(product.ingredients)
     ]
     return sorted(
-        items, key=lambda item: (item["effective_weight_per_kg"], item["name"])
+        items, key=lambda item: (item["effective_price_per_kg"], item["name"])
     )
 
 

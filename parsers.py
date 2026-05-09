@@ -95,7 +95,7 @@ def extract_weight_grams(item: dict, details: list[dict]) -> int | None:
     return parse_weight_grams_from_kg(weight_value)
 
 
-def extract_weight_per_kg(item: dict, weight_grams: int | None) -> int | None:
+def extract_price_per_kg(item: dict, weight_grams: int | None) -> int | None:
     """Calculate the price per kilogram for a product.
 
     For weighted items, uses the unitPrice directly. For regular items,
