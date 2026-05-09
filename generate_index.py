@@ -217,4 +217,4 @@ def run_html_mode() -> None:
     discount_percent = ask_discount_percent()
     generated_categories = generate_category_pages(discount_percent)
     output_file = generate_categories_index(generated_categories, discount_percent)
-    logger.info(f"Generated {output_file}")
+    logger.info("Generated %s", output_file)

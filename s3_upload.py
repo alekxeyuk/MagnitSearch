@@ -259,7 +259,9 @@ def upload_output_to_s3(
             raise RuntimeError(f"Failed to upload {file_path.name}: {exc}") from exc
 
         uploaded_count += 1
-        logger.info(f"Uploaded {file_path.name} -> s3://{bucket_name}/{object_key}")
+        logger.info(
+            "Uploaded %s -> s3://%s/%s", file_path.name, bucket_name, object_key
+        )
 
     return uploaded_count
 
@@ -275,4 +277,4 @@ def run_upload_mode() -> None:
     prefix = prompt_key_prefix(saved_params["prefix"])
     save_upload_params(bucket_name, prefix)
     uploaded_count = upload_output_to_s3(bucket_name, prefix=prefix)
-    logger.info(f"Uploaded {uploaded_count} files from {OUTPUT_DIR}")
+    logger.info("Uploaded %s files from %s", uploaded_count, OUTPUT_DIR)

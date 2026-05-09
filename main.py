@@ -101,7 +101,7 @@ def run_search_mode() -> None:
         for item in items:
             save_item(item, category_id=category["id"])
 
-    logger.info(f"Saved {len(items)} items to database for {category['title']}")
+    logger.info("Saved %d items to database for %s", len(items), category["title"])
 
 
 def run_details_mode() -> None:
@@ -139,7 +139,10 @@ def run_details_mode() -> None:
             )
             sys.stdout.flush()
 
-    logger.info(f"Updated {updated_count} items from item details for {category.title}")
+    sys.stdout.write("\n")
+    logger.info(
+        "Updated %d items from item details for %s", updated_count, category.title
+    )
 
 
 def get_operation_mode() -> str:

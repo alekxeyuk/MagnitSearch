@@ -4,6 +4,8 @@ Defines the database schema using Peewee ORM including Product,
 Category, and ProductCategory models with utility functions.
 """
 
+# pylint: disable=R0903,C0115,E1101,W0212  # ORM models + dynamic _meta
+
 from peewee import (
     BooleanField,
     CompositeKey,

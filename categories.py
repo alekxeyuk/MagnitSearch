@@ -97,7 +97,7 @@ def prompt_search_category() -> dict:
     categories = get_search_categories()
     logger.info("Select category for import:")
     for index, category in enumerate(categories, start=1):
-        logger.info(f"{index} - {category['title']} ({category['id']})")
+        logger.info("%d - %s (%d)", index, category["title"], category["id"])
     logger.info("0 - enter category manually")
 
     selected = input("Category: ").strip()
@@ -151,7 +151,7 @@ def prompt_local_category() -> Category:
 
     logger.info("Select category from local db:")
     for index, category in enumerate(categories, start=1):
-        logger.info(f"{index} - {category.title} ({category.id})")
+        logger.info("%d - %s (%d)", index, category.title, category.id)
 
     selected = int(input("Category: ").strip()) - 1
     if selected < 0 or selected >= len(categories):
