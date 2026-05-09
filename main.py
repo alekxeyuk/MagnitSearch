@@ -6,8 +6,6 @@ fetching details, generating HTML, and uploading to S3.
 
 from typing import cast
 
-import sys
-
 import requests
 
 from api import base_search_payload, fetch_all_items, fetch_item_details
@@ -35,6 +33,20 @@ from s3_upload import run_upload_mode
 logger = setup_logger(__name__)
 
 
+def print_progress(current: int, total: int, bar_length: int = 30) -> None:
+    """Print a progress bar to stdout.
+
+    Args:
+        current: Current progress count.
+        total: Total count.
+        bar_length: Length of the progress bar in characters.
+    """
+    progress = current / total
+    filled = int(bar_length * progress)
+    bar = "#" * filled + "-" * (bar_length - filled)
+    print(f"\r[{bar}] {current}/{total} ({progress * 100:.1f}%)", end="", flush=True)
+
+
 def save_item(item: dict, category_id: int | None = None) -> None:
     """Save or update a product item in the database.
 
@@ -48,16 +60,17 @@ def save_item(item: dict, category_id: int | None = None) -> None:
     """
     image_url = None
     gallery = item.get("gallery")
-    if gallery and len(gallery) > 0:
+    if gallery:
         image_url = gallery[0].get("url")
 
+    product_id = item.get("id")
     ratings = item.get("ratings") or {}
     promotion = item.get("promotion") or {}
     details = item.get("details") or []
     weight = extract_weight_grams(item, details)
 
     Product.replace(
-        id=item.get("id"),
+        id=product_id,
         product_id=item.get("productId"),
         name=item.get("name"),
         price=item.get("price"),
@@ -77,10 +90,8 @@ def save_item(item: dict, category_id: int | None = None) -> None:
         price_per_kg=extract_price_per_kg(item, weight),
     ).execute()
 
-    if category_id is not None:
-        product_id = item.get("id")
-        if product_id is not None:
-            link_product_to_category(product_id, category_id)
+    if category_id is not None and product_id is not None:
+        link_product_to_category(product_id, category_id)
 
 
 def run_search_mode() -> None:
@@ -112,12 +123,11 @@ def run_details_mode() -> None:
     API and updates the database records.
     """
     category = prompt_local_category()
-    product_ids = (
-        Product.select(Product.id)
+    products = list(
+        Product.select()
         .join(ProductCategory)
         .where(ProductCategory.category == category)
     )
-    products = list(Product.select().where(Product.id.in_(product_ids)))
     if not products:
         logger.warning("No items found in selected category")
         return
@@ -130,16 +140,9 @@ def run_details_mode() -> None:
             item = fetch_item_details(product.id, store_id)
             save_item(item, category_id=cast(int, category.id))
             updated_count += 1
-            progress = updated_count / total_count
-            bar_length = PROGRESS_BAR_LENGTH
-            filled_length = int(bar_length * progress)
-            progress_bar = "#" * filled_length + "-" * (bar_length - filled_length)
-            sys.stdout.write(
-                f"\r[{progress_bar}] {index}/{total_count} ({progress * 100:.1f}%)"
-            )
-            sys.stdout.flush()
+            print_progress(updated_count, total_count, PROGRESS_BAR_LENGTH)
 
-    sys.stdout.write("\n")
+    print(end="\n")
     logger.info(
         "Updated %d items from item details for %s", updated_count, category.title
     )
@@ -173,16 +176,17 @@ def main() -> None:
         ensure_schema()
 
         mode = get_operation_mode()
-        if mode == "1":
-            run_search_mode()
-        elif mode == "2":
-            run_details_mode()
-        elif mode == "3":
-            run_html_mode()
-        elif mode == "4":
-            run_upload_mode()
-        else:
-            logger.warning("Unknown mode")
+        match mode:
+            case "1":
+                run_search_mode()
+            case "2":
+                run_details_mode()
+            case "3":
+                run_html_mode()
+            case "4":
+                run_upload_mode()
+            case _:
+                logger.warning("Unknown mode: %s", mode)
     except (RuntimeError, ValueError, requests.RequestException) as exc:
         logger.error(exc)
     finally:
