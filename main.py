@@ -14,6 +14,7 @@ from api import base_search_payload, fetch_all_items, fetch_item_details
 from categories import prompt_local_category, prompt_search_category
 from config import PROGRESS_BAR_LENGTH
 from generate_index import run_html_mode
+from logging_config import setup_logger
 from models import (
     Product,
     ProductCategory,
@@ -30,6 +31,8 @@ from parsers import (
     extract_weight_per_kg,
 )
 from s3_upload import run_upload_mode
+
+logger = setup_logger(__name__)
 
 
 def save_item(item: dict, category_id: int | None = None) -> None:
@@ -91,14 +94,14 @@ def run_search_mode() -> None:
 
     items = fetch_all_items(category["id"])
     if not items:
-        print("No items returned from search")
+        logger.info("No items returned from search")
         return
 
     with db.atomic():
         for item in items:
             save_item(item, category_id=category["id"])
 
-    print(f"Saved {len(items)} items to database for {category['title']}")
+    logger.info(f"Saved {len(items)} items to database for {category['title']}")
 
 
 def run_details_mode() -> None:
@@ -116,7 +119,7 @@ def run_details_mode() -> None:
     )
     products = list(Product.select().where(Product.id.in_(product_ids)))
     if not products:
-        print("No items found in selected category")
+        logger.warning("No items found in selected category")
         return
 
     updated_count = 0
@@ -136,8 +139,7 @@ def run_details_mode() -> None:
             )
             sys.stdout.flush()
 
-    print()
-    print(f"Updated {updated_count} items from item details for {category.title}")
+    logger.info(f"Updated {updated_count} items from item details for {category.title}")
 
 
 def get_operation_mode() -> str:
@@ -148,11 +150,11 @@ def get_operation_mode() -> str:
     Returns:
         The user's input as a string representing the chosen mode.
     """
-    print("Select operation mode:")
-    print("1 - parse data using /search")
-    print("2 - request item details for every item stored in db category")
-    print("3 - generate category html files from local db")
-    print("4 - upload output folder to s3 object storage")
+    logger.info("Select operation mode:")
+    logger.info("1 - parse data using /search")
+    logger.info("2 - request item details for every item stored in db category")
+    logger.info("3 - generate category html files from local db")
+    logger.info("4 - upload output folder to s3 object storage")
     return input("Mode: ").strip()
 
 
@@ -177,9 +179,9 @@ def main() -> None:
         elif mode == "4":
             run_upload_mode()
         else:
-            print("Unknown mode")
+            logger.warning("Unknown mode")
     except (RuntimeError, ValueError, requests.RequestException) as exc:
-        print(exc)
+        logger.error(exc)
     finally:
         if not db.is_closed():
             db.close()

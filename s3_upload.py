@@ -13,6 +13,9 @@ import boto3
 from botocore.exceptions import BotoCoreError, ClientError, ProfileNotFound
 
 from config import AWS_CONFIG_PATH, AWS_CREDENTIALS_PATH, AWS_PARAMS_PATH, OUTPUT_DIR
+from logging_config import setup_logger
+
+logger = setup_logger(__name__)
 
 
 def load_aws_profile(profile_name: str = "default") -> dict:
@@ -246,20 +249,17 @@ def upload_output_to_s3(
             extra_args["ContentType"] = content_type
 
         try:
-            if extra_args:
-                s3_client.upload_file(
-                    str(file_path),
-                    bucket_name,
-                    object_key,
-                    ExtraArgs=extra_args,
-                )
-            else:
-                s3_client.upload_file(str(file_path), bucket_name, object_key)
+            s3_client.upload_file(
+                str(file_path),
+                bucket_name,
+                object_key,
+                ExtraArgs=extra_args if extra_args else None,
+            )
         except (BotoCoreError, ClientError) as exc:
             raise RuntimeError(f"Failed to upload {file_path.name}: {exc}") from exc
 
         uploaded_count += 1
-        print(f"Uploaded {file_path.name} -> s3://{bucket_name}/{object_key}")
+        logger.info(f"Uploaded {file_path.name} -> s3://{bucket_name}/{object_key}")
 
     return uploaded_count
 
@@ -275,4 +275,4 @@ def run_upload_mode() -> None:
     prefix = prompt_key_prefix(saved_params["prefix"])
     save_upload_params(bucket_name, prefix)
     uploaded_count = upload_output_to_s3(bucket_name, prefix=prefix)
-    print(f"Uploaded {uploaded_count} files from {OUTPUT_DIR}")
+    logger.info(f"Uploaded {uploaded_count} files from {OUTPUT_DIR}")

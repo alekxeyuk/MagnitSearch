@@ -1,5 +1,21 @@
-requests
-peewee
-jinja2
-boto3
-pydantic
+# Runtime dependencies - pinned for reproducibility
+requests==2.32.5
+peewee==4.0.5
+Jinja2==3.1.6
+boto3==1.43.6
+pydantic==2.13.4
+
+# Direct dependencies (pinned for reproducibility)
+annotated-types==0.7.0
+botocore==1.43.6
+certifi==2025.11.12
+charset-normalizer==3.4.4
+idna==3.11
+jmespath==1.1.0
+MarkupSafe==3.0.3
+pydantic_core==2.46.4
+python-dateutil==2.9.0.post0
+s3transfer==0.17.0
+typing-inspection==0.4.2
+urllib3==2.5.0
+six==1.17.0

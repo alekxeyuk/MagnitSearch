@@ -9,7 +9,10 @@ from typing import cast
 import re
 
 from config import DEFAULT_CATEGORIES
+from logging_config import setup_logger
 from models import Category, ProductCategory
+
+logger = setup_logger(__name__)
 
 
 def slugify_category_title(title: str, category_id: int) -> str:
@@ -92,10 +95,10 @@ def prompt_search_category() -> dict:
         ValueError: If the selected category index is invalid.
     """
     categories = get_search_categories()
-    print("Select category for import:")
+    logger.info("Select category for import:")
     for index, category in enumerate(categories, start=1):
-        print(f"{index} - {category['title']} ({category['id']})")
-    print("0 - enter category manually")
+        logger.info(f"{index} - {category['title']} ({category['id']})")
+    logger.info("0 - enter category manually")
 
     selected = input("Category: ").strip()
     if selected == "0":
@@ -146,9 +149,9 @@ def prompt_local_category() -> Category:
     if not categories:
         raise ValueError("No categories found in local database")
 
-    print("Select category from local db:")
+    logger.info("Select category from local db:")
     for index, category in enumerate(categories, start=1):
-        print(f"{index} - {category.title} ({category.id})")
+        logger.info(f"{index} - {category.title} ({category.id})")
 
     selected = int(input("Category: ").strip()) - 1
     if selected < 0 or selected >= len(categories):

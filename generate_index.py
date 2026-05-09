@@ -6,136 +6,31 @@ Handles price formatting, discount application, and HTML file generation.
 
 from typing import cast
 
-import re
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 
 from config import (
-    MECHANICAL_DEBONING_PATTERN,
     OUTPUT_DIR,
     TEMPLATES_DIR,
-    PRICE_DIVISOR,
     PRODUCT_PAGE_URL,
-    WEIGHT_KG_THRESHOLD,
-    DISCOUNT_MIN_PERCENT,
-    DISCOUNT_MAX_PERCENT,
 )
+from html_helpers import (
+    format_price,
+    format_weight,
+    has_mechanical_deboning,
+    apply_discount,
+    parse_discount_percent,
+)
+from logging_config import setup_logger
 from models import Category, Product, ProductCategory, db
 
-MECHANICAL_DEBONING_REGEX = re.compile(MECHANICAL_DEBONING_PATTERN, re.IGNORECASE)
+logger = setup_logger(__name__)
 
 jinja_env = Environment(
     loader=FileSystemLoader(str(TEMPLATES_DIR)),
     keep_trailing_newline=True,
 )
-
-
-def format_price(value: int | None) -> str | None:
-    """Format a price value in kopecks to a human-readable string.
-
-    Converts an integer price in kopecks (e.g., 12345) to a string
-    representation in rubles with two decimal places (e.g., "123.45 ₽").
-
-    Args:
-        value: Price in kopecks as an integer, or None.
-
-    Returns:
-        Formatted price string with ruble symbol, or None if input is None.
-    """
-    if value is None:
-        return None
-    return f"{value / PRICE_DIVISOR:.2f} ₽"
-
-
-def format_weight(weight: int | None) -> str | None:
-    """Format a weight value in grams to a human-readable string.
-
-    Converts an integer weight in grams to a human-readable format,
-    displaying in kilograms if weight is 1000g or more, otherwise in grams.
-
-    Args:
-        weight: Weight in grams as an integer, or None.
-
-    Returns:
-        Formatted weight string (e.g., "1.5 кг", "500 г"), or None if input is None.
-    """
-    if weight is None:
-        return None
-    if weight >= WEIGHT_KG_THRESHOLD and weight % WEIGHT_KG_THRESHOLD == 0:
-        return f"{weight // WEIGHT_KG_THRESHOLD} кг"
-    if weight >= WEIGHT_KG_THRESHOLD:
-        return f"{weight / WEIGHT_KG_THRESHOLD:.2f} кг"
-    return f"{weight} г"
-
-
-def has_mechanical_deboning(ingredients: str | None) -> bool:
-    """Check if ingredients contain mechanically deboned meat.
-
-    Searches the ingredients string for patterns indicating mechanical
-    deboning of meat, which is a specific processing method.
-
-    Args:
-        ingredients: Ingredients string, or None.
-
-    Returns:
-        True if mechanical deboning pattern is found, False otherwise.
-    """
-    if not ingredients:
-        return False
-    normalized = ingredients.replace("-", " ")
-    return bool(MECHANICAL_DEBONING_REGEX.search(normalized))
-
-
-def apply_discount(
-    value: int | None, discount_percent: float, can_discount: bool
-) -> int | None:
-    """Apply a discount percentage to a value.
-
-    Reduces the input value by the specified discount percentage,
-    but only if the item is eligible for discount (can_discount is True).
-
-    Args:
-        value: Original value in kopecks, or None.
-        discount_percent: Discount percentage (0-100).
-        can_discount: Whether the item is eligible for discount.
-
-    Returns:
-        Discounted value as an integer, original value, or None.
-    """
-    if value is None or not can_discount or discount_percent <= 0:
-        return value
-    discounted_value = value * (100 - discount_percent) / 100
-    return int(round(discounted_value))
-
-
-def parse_discount_percent(raw_value: str) -> float:
-    """Parse a discount percentage from a user input string.
-
-    Converts a string input to a float discount percentage, validating
-    that it's within the acceptable range (DISCOUNT_MIN_PERCENT to
-    DISCOUNT_MAX_PERCENT).
-
-    Args:
-        raw_value: User input string containing discount percentage.
-
-    Returns:
-        Discount percentage as a float.
-
-    Raises:
-        ValueError: If discount percent is outside valid range.
-    """
-    normalized = raw_value.strip().replace(",", ".")
-    if not normalized:
-        return 0.0
-
-    discount_percent = float(normalized)
-    if (
-        discount_percent < DISCOUNT_MIN_PERCENT
-        or discount_percent > DISCOUNT_MAX_PERCENT
-    ):
-        raise ValueError("Discount percent must be between 0 and 100")
-    return discount_percent
 
 
 def ask_discount_percent() -> float:
@@ -147,7 +42,7 @@ def ask_discount_percent() -> float:
     Returns:
         Discount percentage as a float (0.0 if no discount).
     """
-    print("Do you have a promocode discount?")
+    logger.info("Do you have a promocode discount?")
     raw_value = input("Enter discount percent, or 0 if none: ")
     return parse_discount_percent(raw_value)
 
@@ -322,4 +217,4 @@ def run_html_mode() -> None:
     discount_percent = ask_discount_percent()
     generated_categories = generate_category_pages(discount_percent)
     output_file = generate_categories_index(generated_categories, discount_percent)
-    print(f"Generated {output_file}")
+    logger.info(f"Generated {output_file}")
