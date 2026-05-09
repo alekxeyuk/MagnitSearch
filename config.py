@@ -4,6 +4,7 @@ Contains all configuration constants including API endpoints,
 database settings, and file paths for the application.
 """
 
+import os
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -14,6 +15,8 @@ SEARCH_ENDPOINT = f"{BASE_URL}/goods/search"
 ITEM_DETAILS_ENDPOINT = f"{BASE_URL}/goods/{{item_id}}/stores/{{store_id}}"
 PRODUCT_PAGE_URL = "https://magnit.ru/product/{product_id}"
 
+X_DEVICE_ID = os.getenv("MAGNIT_X_DEVICE_ID", "e3267ea9-8f6b-4e17-bca0-64a06ba225c7")
+
 HEADERS = {
     "accept": "application/json",
     "content-type": "application/json",
@@ -22,7 +25,7 @@ HEADERS = {
         "AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/147.0.0.0 Safari/537.36"
     ),
-    "x-device-id": "e3267ea9-8f6b-4e17-bca0-64a06ba225c7",
+    "x-device-id": X_DEVICE_ID,
 }
 
 ITEM_REQUEST_PARAMS = {
@@ -30,7 +33,7 @@ ITEM_REQUEST_PARAMS = {
     "catalogtype": "2",
 }
 
-STORE_CODE = "543354"
+STORE_CODE = os.getenv("MAGNIT_STORE_CODE", "543354")
 STORE_TYPE = "express"
 CATALOG_TYPE = "2"
 
