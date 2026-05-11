@@ -155,11 +155,44 @@ def run_details_mode() -> None:
     )
 
 
+def update_item_prices(item: dict, category_id: int) -> None:
+    """Update only price-related fields for an existing product.
+
+    Updates price, quantity, rating, discount_percent, old_price,
+    is_promotion, cashback, and final_price without touching other fields.
+    Also ensures the product-category link exists.
+
+    Args:
+        item: Product item dictionary from the API response.
+        category_id: Category ID to link the product to.
+    """
+    product_id = item.get("id")
+    if product_id is None:
+        return
+
+    ratings = item.get("ratings") or {}
+    promotion = item.get("promotion") or {}
+
+    Product.update(
+        price=item.get("price"),
+        quantity=item.get("quantity"),
+        rating=ratings.get("rating"),
+        discount_percent=promotion.get("discountPercent"),
+        old_price=promotion.get("oldPrice"),
+        is_promotion=promotion.get("isPromotion"),
+        cashback=item.get("cashback"),
+        final_price=extract_final_price(item),
+    ).where(Product.id == product_id).execute()
+
+    link_product_to_category(product_id, category_id)
+
+
 def run_update_all_mode() -> None:
     """Run the update mode: refresh prices for all local DB categories.
 
     Fetches all items via /search for every category stored in the local
-    database and updates their prices without fetching individual item details.
+    database and updates only price-related fields without touching
+    detailed info previously scraped by mode 2.
     """
     categories = get_local_categories()
     if not categories:
@@ -176,7 +209,7 @@ def run_update_all_mode() -> None:
 
         with db.atomic():
             for item in items:
-                save_item(item, category_id=category.id)
+                update_item_prices(item, category_id=cast(int, category.id))
 
         logger.info("Updated %d items for %s", len(items), category.title)
 
