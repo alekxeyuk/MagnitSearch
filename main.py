@@ -9,7 +9,11 @@ from typing import cast
 import requests
 
 from api import base_search_payload, fetch_all_items, fetch_item_details
-from categories import prompt_local_category, prompt_search_category
+from categories import (
+    get_local_categories,
+    prompt_local_category,
+    prompt_search_category,
+)
 from config import PROGRESS_BAR_LENGTH
 from generate_index import run_html_mode
 from logging_config import setup_logger
@@ -44,7 +48,11 @@ def print_progress(current: int, total: int, bar_length: int = 30) -> None:
     progress = current / total
     filled = int(bar_length * progress)
     progress_bar = "#" * filled + "-" * (bar_length - filled)
-    print(f"\r[{progress_bar}] {current}/{total} ({progress * 100:.1f}%)", end="", flush=True)
+    print(
+        f"\r[{progress_bar}] {current}/{total} ({progress * 100:.1f}%)",
+        end="",
+        flush=True,
+    )
 
 
 def save_item(item: dict, category_id: int | None = None) -> None:
@@ -147,6 +155,32 @@ def run_details_mode() -> None:
     )
 
 
+def run_update_all_mode() -> None:
+    """Run the update mode: refresh prices for all local DB categories.
+
+    Fetches all items via /search for every category stored in the local
+    database and updates their prices without fetching individual item details.
+    """
+    categories = get_local_categories()
+    if not categories:
+        logger.warning("No categories found in local database")
+        return
+
+    for category in categories:
+        logger.info("Updating %s (%d)", category.title, category.id)
+        upsert_category(category.id, category.title, category.slug)
+        items = fetch_all_items(category.id)
+        if not items:
+            logger.info("No items returned for %s", category.title)
+            continue
+
+        with db.atomic():
+            for item in items:
+                save_item(item, category_id=category.id)
+
+        logger.info("Updated %d items for %s", len(items), category.title)
+
+
 def get_operation_mode() -> str:
     """Prompt the user to select an operation mode.
 
@@ -156,6 +190,7 @@ def get_operation_mode() -> str:
         The user's input as a string representing the chosen mode.
     """
     logger.info("Select operation mode:")
+    logger.info("0 - update prices for all categories using /search")
     logger.info("1 - parse data using /search")
     logger.info("2 - request item details for every item stored in db category")
     logger.info("3 - generate category html files from local db")
@@ -176,6 +211,8 @@ def main() -> None:
 
         mode = get_operation_mode()
         match mode:
+            case "0":
+                run_update_all_mode()
             case "1":
                 run_search_mode()
             case "2":
