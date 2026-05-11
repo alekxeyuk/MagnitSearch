@@ -29,7 +29,6 @@ class BaseModel(Model):
 
 class Product(BaseModel):
     id = TextField(primary_key=True)
-    product_id = TextField(null=True)
     name = TextField(null=True)
     price = IntegerField(null=True)
     quantity = IntegerField(null=True)

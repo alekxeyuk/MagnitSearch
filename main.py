@@ -43,8 +43,8 @@ def print_progress(current: int, total: int, bar_length: int = 30) -> None:
     """
     progress = current / total
     filled = int(bar_length * progress)
-    bar = "#" * filled + "-" * (bar_length - filled)
-    print(f"\r[{bar}] {current}/{total} ({progress * 100:.1f}%)", end="", flush=True)
+    progress_bar = "#" * filled + "-" * (bar_length - filled)
+    print(f"\r[{progress_bar}] {current}/{total} ({progress * 100:.1f}%)", end="", flush=True)
 
 
 def save_item(item: dict, category_id: int | None = None) -> None:
@@ -71,7 +71,6 @@ def save_item(item: dict, category_id: int | None = None) -> None:
 
     Product.replace(
         id=product_id,
-        product_id=item.get("productId"),
         name=item.get("name"),
         price=item.get("price"),
         quantity=item.get("quantity"),
@@ -136,7 +135,7 @@ def run_details_mode() -> None:
     total_count = len(products)
     store_id = str(base_search_payload["storeCode"])
     with db.atomic():
-        for index, product in enumerate(products, start=1):
+        for _, product in enumerate(products, start=1):
             item = fetch_item_details(product.id, store_id)
             save_item(item, category_id=cast(int, category.id))
             updated_count += 1

@@ -90,7 +90,6 @@ class Item(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     id: str | None = None
-    product_id: str | None = Field(None, alias="productId")
     name: str | None = None
     price: int | None = None
     quantity: int | None = None
