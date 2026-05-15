@@ -214,6 +214,35 @@ def run_update_all_mode() -> None:
         logger.info("Updated %d items for %s", len(items), category.title)
 
 
+def run_update_price_per_kg_mode() -> None:
+    """Run mode 5: update price_per_kg for all products in database.
+
+    Recalculates/updates the price_per_kg field using price and weight
+    fields already stored in the database.
+    """
+    products = list(Product.select())
+    if not products:
+        logger.warning("No products found in local database")
+        return
+
+    updated_count = 0
+    total_count = len(products)
+
+    with db.atomic():
+        for product in products:
+            if product.weight is not None and product.price is not None:
+                price_per_kg = int(round(product.price * 1000 / product.weight))
+                Product.update(
+                    price_per_kg=price_per_kg,
+                ).where(Product.id == product.id).execute()
+
+                updated_count += 1
+                print_progress(updated_count, total_count, PROGRESS_BAR_LENGTH)
+
+    print(end="\n")
+    logger.info("Updated price_per_kg for %d items", updated_count)
+
+
 def get_operation_mode() -> str:
     """Prompt the user to select an operation mode.
 
@@ -228,6 +257,7 @@ def get_operation_mode() -> str:
     logger.info("2 - request item details for every item stored in db category")
     logger.info("3 - generate category html files from local db")
     logger.info("4 - upload output folder to s3 object storage")
+    logger.info("5 - update price_per_kg for all products in db")
     return input("Mode: ").strip()
 
 
@@ -254,6 +284,8 @@ def main() -> None:
                 run_html_mode()
             case "4":
                 run_upload_mode()
+            case "5":
+                run_update_price_per_kg_mode()
             case _:
                 logger.warning("Unknown mode: %s", mode)
     except (RuntimeError, ValueError, requests.RequestException) as exc:
